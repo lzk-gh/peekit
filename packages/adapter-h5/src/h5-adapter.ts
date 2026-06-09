@@ -108,6 +108,10 @@ export class H5Adapter implements PeekitAdapter {
       page = await context.newPage();
     }
 
+    if (config.viewport) {
+      await page.setViewportSize(config.viewport);
+    }
+
     page.setDefaultTimeout(timeoutMs);
     page.setDefaultNavigationTimeout(timeoutMs);
 
