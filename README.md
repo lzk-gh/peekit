@@ -41,6 +41,7 @@ Peekit exposes these MCP tools:
 
 - `peekit_inspect_environment`
 - `peekit_suggest_target_config`
+- `peekit_suggest_mcp_client_config`
 - `peekit_validate_target`
 - `peekit_explain_setup_blocker`
 - `peekit_list_targets`

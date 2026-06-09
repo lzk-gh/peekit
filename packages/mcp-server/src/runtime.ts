@@ -15,6 +15,7 @@ import {
   explainSetupBlocker,
   getCapabilityMatrix,
   inspectProjectEnvironment,
+  suggestMcpClientConfigSnippets,
   suggestNextProbe,
   suggestTargetConfigs,
   validateTargetConfig,
@@ -59,6 +60,8 @@ export class PeekitMcpRuntime {
         return this.inspectEnvironment(args);
       case "peekit_suggest_target_config":
         return this.suggestTargetConfig(args);
+      case "peekit_suggest_mcp_client_config":
+        return this.suggestMcpClientConfig(args);
       case "peekit_validate_target":
         return this.validateTarget(args);
       case "peekit_explain_setup_blocker":
@@ -117,6 +120,35 @@ export class PeekitMcpRuntime {
     return {
       environment,
       suggestions: suggestTargetConfigs(environment, preferredKind as TargetKind | undefined)
+    };
+  }
+
+  private async suggestMcpClientConfig(args: unknown) {
+    const record = asRecord(args);
+    const environment = await inspectProjectEnvironment(
+      typeof record.cwd === "string" ? record.cwd : process.cwd()
+    );
+    const snippets = suggestMcpClientConfigSnippets(environment, {
+      ...(typeof record.clientName === "string" ? { clientName: record.clientName } : {}),
+      ...(typeof record.serverName === "string" ? { serverName: record.serverName } : {}),
+      ...(typeof record.command === "string" ? { command: record.command } : {}),
+      ...(Array.isArray(record.args)
+        ? { args: record.args.filter((arg): arg is string => typeof arg === "string") }
+        : {}),
+      ...(isStringRecord(record.env) ? { env: record.env } : {})
+    });
+
+    return {
+      cwd: environment.cwd,
+      setupManifest: environment.setupManifest,
+      mcpClients: environment.mcpClients,
+      editorApps: environment.editorApps,
+      snippets,
+      security: {
+        writePolicy: "suggestion_only",
+        configContentsRead: false,
+        configFilesWritten: false
+      }
     };
   }
 
@@ -439,6 +471,13 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return (
+    isRecord(value) &&
+    Object.values(value).every((item): item is string => typeof item === "string")
+  );
 }
 
 function requireString(record: Record<string, unknown>, field: string): string {

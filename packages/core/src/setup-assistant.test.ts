@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { inspectProjectEnvironment } from "./env.js";
+import { suggestMcpClientConfigSnippets } from "./mcp-client-config.js";
 import { suggestTargetConfigs, validateTargetConfig } from "./target-config.js";
 
 const tempDirs: string[] = [];
@@ -220,6 +221,30 @@ describe("AI setup assistant discovery", () => {
           requiresUserAction: false
         }
       });
+
+      expect(suggestMcpClientConfigSnippets(environment, { clientName: "Cursor" })[0]).toMatchObject(
+        {
+          clientName: "Cursor",
+          configPath: clientConfig,
+          configExists: true,
+          contentRead: false,
+          source: "manifest",
+          writePolicy: "suggestion_only",
+          mergeStrategy: "merge_mcpServers_peekit",
+          requiresUserAction: true,
+          snippet: {
+            mcpServers: {
+              peekit: {
+                command: "npx",
+                args: ["-y", "peekit", "mcp"]
+              }
+            }
+          }
+        }
+      );
+      expect(suggestMcpClientConfigSnippets(environment, { clientName: "Cursor" })[0]?.preview).toContain(
+        "\"peekit\""
+      );
     } finally {
       await close(server);
     }

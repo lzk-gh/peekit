@@ -37,5 +37,5 @@ Peekit performs safe local discovery for H5 and Weixin setup:
 | Browser | Checks Playwright cache, PATH, selected env vars, and common Chrome/Edge paths |
 | H5 dev server | Infers loopback URLs from package scripts and probes only localhost/127.0.0.1 |
 | Weixin DevTools | Checks `WECHAT_DEVTOOLS_CLI`, PATH, and common install paths |
-| MCP clients | Reports known config path existence without reading file contents |
+| MCP clients | Reports known config path existence and generates snippets without reading or writing config files |
 | Security | Skips full disk scans, secrets, browser profiles, public network scanning, and config writes |

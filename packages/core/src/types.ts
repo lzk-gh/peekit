@@ -284,6 +284,37 @@ export type McpClientInspection = {
   appExists?: boolean;
 };
 
+export type McpServerCommand = {
+  command: string;
+  args: string[];
+  env?: Record<string, string>;
+};
+
+export type McpClientConfigSnippet = {
+  clientName: string;
+  configPath: string;
+  configExists: boolean;
+  contentRead: false;
+  source: "manifest" | "known-path" | "generic";
+  writePolicy: "suggestion_only";
+  mergeStrategy: "merge_mcpServers_peekit";
+  requiresUserAction: true;
+  serverName: string;
+  snippet: {
+    mcpServers: Record<string, McpServerCommand>;
+  };
+  preview: string;
+  notes: string[];
+};
+
+export type McpClientConfigSnippetOptions = {
+  clientName?: string;
+  serverName?: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+};
+
 export type EditorAppInspection = {
   name: string;
   appPath: string;

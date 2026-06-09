@@ -29,6 +29,7 @@ Initial setup:
 ```txt
 peekit_inspect_environment
 peekit_suggest_target_config
+peekit_suggest_mcp_client_config
 peekit_validate_target
 peekit_connect_target
 ```
@@ -36,6 +37,8 @@ peekit_connect_target
 For the fastest and clearest setup, copy `.peekit/local-setup.example.json` to `.peekit/local-setup.json` and fill in local editor, browser, Weixin DevTools, and MCP client config paths. The local file is ignored by git.
 
 Setup tools use safe local discovery. Peekit reads the local setup manifest first, then falls back to the project directory, PATH, selected environment variables, common local tool locations, loopback ports, and MCP client config path existence only when needed. It does not run full disk scans, read secrets, read editor config contents, scan public networks, or write editor configuration.
+
+`peekit_suggest_mcp_client_config` generates JSON snippets for detected MCP clients. It returns suggested content only; agents must not claim Peekit wrote editor or MCP client configuration.
 
 Element state investigation:
 

@@ -31,6 +31,7 @@ const targetConfigSchema: JsonSchema = {
     ticket: { type: "string" },
     trustProject: { type: "boolean" },
     browser: { type: "string", enum: ["chromium", "firefox", "webkit"] },
+    browserPath: { type: "string" },
     headless: { type: "boolean" },
     viewport: {
       type: "object",
@@ -76,6 +77,24 @@ export const PEEKIT_TOOLS: PeekitToolDefinition[] = [
           type: "string",
           enum: ["h5", "mp-weixin", "mp-alipay", "mp-bytedance", "mp-qq"]
         }
+      }
+    }
+  },
+  {
+    name: "peekit_suggest_mcp_client_config",
+    description: "Suggest MCP client config snippets without reading or writing client config files.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        cwd: { type: "string" },
+        clientName: { type: "string" },
+        serverName: { type: "string" },
+        command: { type: "string" },
+        args: {
+          type: "array",
+          items: { type: "string" }
+        },
+        env: { type: "object" }
       }
     }
   },

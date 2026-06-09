@@ -101,6 +101,28 @@ Agents should treat unsupported fields as evidence, not as failure to be hidden.
 
 Agents should read `.peekit/local-setup.json` evidence first when it exists. If the manifest is missing or incomplete, agents should use fallback discovery evidence before asking developers for editor paths, browser paths, or mini program DevTools paths. If a blocker remains, report the `message` and `remediation`.
 
+## MCP Client Config Snippets
+
+`peekit_suggest_mcp_client_config` returns config snippets for detected MCP clients:
+
+```ts
+{
+  snippets: Array<{
+    clientName: string
+    configPath: string
+    configExists: boolean
+    contentRead: false
+    writePolicy: "suggestion_only"
+    mergeStrategy: "merge_mcpServers_peekit"
+    requiresUserAction: true
+    snippet: { mcpServers: Record<string, { command: string; args: string[]; env?: Record<string, string> }> }
+    preview: string
+  }>
+}
+```
+
+Agents may show or merge the returned snippet, but Peekit itself never reads existing config contents and never writes editor or MCP client configuration files.
+
 ## Case Persistence
 
 `peekit_record_case` persists cases to `.peekit/cases.json` by default for the current MCP working directory. The server also keeps a hot in-memory cache during the process lifetime.

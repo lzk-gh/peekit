@@ -34,3 +34,5 @@ pnpm build
 ```
 
 Peekit writes MCP protocol messages on stdio. Avoid adding normal stdout logging to the server process.
+
+Agents can call `peekit_suggest_mcp_client_config` to generate a config snippet for detected clients. Peekit only returns suggested JSON and path evidence; it does not read existing config contents or write editor configuration files.

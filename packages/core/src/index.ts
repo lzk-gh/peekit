@@ -7,3 +7,4 @@ export * from "./diff.js";
 export * from "./diagnostics.js";
 export * from "./env.js";
 export * from "./target-config.js";
+export * from "./mcp-client-config.js";

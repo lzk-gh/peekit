@@ -21,6 +21,7 @@ import { PEEKIT_TOOLS } from "./tools.js";
 const EXPECTED_TOOL_NAMES = [
   "peekit_inspect_environment",
   "peekit_suggest_target_config",
+  "peekit_suggest_mcp_client_config",
   "peekit_validate_target",
   "peekit_explain_setup_blocker",
   "peekit_list_targets",
@@ -55,7 +56,7 @@ describe("MCP tool contract", () => {
 
     expect(names).toEqual(EXPECTED_TOOL_NAMES);
     expect(new Set(names).size).toBe(names.length);
-    expect(PEEKIT_TOOLS).toHaveLength(18);
+    expect(PEEKIT_TOOLS).toHaveLength(19);
 
     for (const tool of PEEKIT_TOOLS) {
       expect(tool.description.trim().length).toBeGreaterThan(12);
@@ -112,6 +113,34 @@ describe("MCP tool contract", () => {
       metadata: {
         source: "package-script"
       }
+    });
+
+    const configSnippets = await call<{
+      snippets: Array<{
+        writePolicy: string;
+        contentRead: boolean;
+        snippet: { mcpServers: Record<string, { command: string; args: string[] }> };
+      }>;
+      security: { configContentsRead: boolean; configFilesWritten: boolean };
+    }>("peekit_suggest_mcp_client_config", {
+      cwd: repoRoot,
+      clientName: "Cursor"
+    });
+    expect(configSnippets.snippets[0]).toMatchObject({
+      writePolicy: "suggestion_only",
+      contentRead: false,
+      snippet: {
+        mcpServers: {
+          peekit: {
+            command: "npx",
+            args: ["-y", "peekit", "mcp"]
+          }
+        }
+      }
+    });
+    expect(configSnippets.security).toMatchObject({
+      configContentsRead: false,
+      configFilesWritten: false
     });
 
     const validationTarget = {
