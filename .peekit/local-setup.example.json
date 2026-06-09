@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "h5": {
+    "url": "http://localhost:5173",
+    "browserPath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+  },
+  "weixin": {
+    "cliPath": "C:\\Program Files\\Tencent\\\u5fae\u4fe1\u5f00\u53d1\u8005\u5de5\u5177\\cli.bat",
+    "projectPath": "D:\\work\\miniapp"
+  },
+  "mcpClients": [
+    {
+      "name": "Cursor",
+      "configPath": "C:\\Users\\<you>\\.cursor\\mcp.json",
+      "appPath": "C:\\Users\\<you>\\AppData\\Local\\Programs\\cursor\\Cursor.exe"
+    },
+    {
+      "name": "Claude Desktop",
+      "configPath": "C:\\Users\\<you>\\AppData\\Roaming\\Claude\\claude_desktop_config.json"
+    }
+  ],
+  "editorApps": [
+    {
+      "name": "VS Code",
+      "appPath": "C:\\Users\\<you>\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
+    }
+  ]
+}

@@ -70,6 +70,37 @@ Unsupported capability must be explicit:
 
 Agents should treat unsupported fields as evidence, not as failure to be hidden.
 
+## Setup Evidence
+
+`peekit_inspect_environment` includes setup fields for AI agents:
+
+```ts
+{
+  setupManifest: {
+    path: string
+    exists: boolean
+    valid: boolean
+    contentRead: boolean
+    errors: string[]
+  }
+  toolchain: {
+    system: { platform: string; arch: string; shell?: string }
+    node: { version: string; execPath: string }
+    packageManagers: Array<{ name: string; selected: boolean; available: boolean; path?: string }>
+    playwright: { browsersPath?: string; chromiumAvailable: boolean; searchedPaths: string[] }
+    browsers: Array<{ name: string; available: boolean; path?: string; source: string }>
+    miniProgramDevTools: Array<{ platform: string; name: string; available: boolean; cliPath?: string; source: string }>
+  }
+  ports: Array<{ url: string; host: string; port: number; reachable: boolean; status?: number; reason?: string }>
+  mcpClients: Array<{ name: string; configPath: string; exists: boolean; contentRead: false; source: string; appPath?: string; appExists?: boolean }>
+  editorApps: Array<{ name: string; appPath: string; exists: boolean; source: "manifest" }>
+  security: { policy: "safe-local-discovery"; inspected: string[]; skipped: string[] }
+  setupBlockers: Array<{ code: string; severity: string; message: string; remediation: string }>
+}
+```
+
+Agents should read `.peekit/local-setup.json` evidence first when it exists. If the manifest is missing or incomplete, agents should use fallback discovery evidence before asking developers for editor paths, browser paths, or mini program DevTools paths. If a blocker remains, report the `message` and `remediation`.
+
 ## Case Persistence
 
 `peekit_record_case` persists cases to `.peekit/cases.json` by default for the current MCP working directory. The server also keeps a hot in-memory cache during the process lifetime.

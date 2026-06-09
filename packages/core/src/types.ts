@@ -7,6 +7,8 @@ export type TargetKind =
 
 export type CapabilityLevel = 0 | 1 | 2 | 3 | 4;
 
+export type PackageManager = "pnpm" | "npm" | "yarn" | "bun";
+
 export type AdapterCapabilities = {
   launch: boolean;
   queryElement: boolean;
@@ -112,6 +114,7 @@ export type PeekitTargetConfig = {
   ticket?: string;
   trustProject?: boolean;
   browser?: "chromium" | "firefox" | "webkit";
+  browserPath?: string;
   headless?: boolean;
   viewport?: Viewport;
   connectOverCDP?: string;
@@ -205,9 +208,126 @@ export type Diagnosis = {
   nextProbes: string[];
 };
 
+export type SetupBlockerCode =
+  | "missing_package_json"
+  | "missing_dev_server"
+  | "missing_tool"
+  | "port_unreachable"
+  | "permission_required"
+  | "unsupported_platform"
+  | "invalid_target"
+  | "invalid_setup_manifest";
+
+export type SetupBlocker = {
+  code: SetupBlockerCode;
+  severity: "info" | "warning" | "error";
+  message: string;
+  remediation: string;
+  target?: TargetKind;
+  evidence?: Record<string, unknown>;
+};
+
+export type PortInspection = {
+  url: string;
+  host: string;
+  port: number;
+  protocol: "http:" | "https:";
+  reachable: boolean;
+  status?: number;
+  reason?: string;
+  source: string;
+};
+
+export type ToolchainInspection = {
+  system: {
+    platform: NodeJS.Platform;
+    arch: string;
+    shell?: string;
+  };
+  node: {
+    version: string;
+    execPath: string;
+  };
+  packageManagers: Array<{
+    name: "pnpm" | "npm" | "yarn" | "bun";
+    selected: boolean;
+    available: boolean;
+    path?: string;
+  }>;
+  playwright: {
+    browsersPath?: string;
+    chromiumAvailable: boolean;
+    searchedPaths: string[];
+  };
+  browsers: Array<{
+    name: "chromium" | "chrome" | "edge";
+    available: boolean;
+    path?: string;
+    source: "manifest" | "env" | "path" | "common-path" | "playwright-cache";
+  }>;
+  miniProgramDevTools: Array<{
+    platform: TargetKind;
+    name: string;
+    available: boolean;
+    cliPath?: string;
+    source: "manifest" | "env" | "path" | "common-path";
+  }>;
+};
+
+export type McpClientInspection = {
+  name: string;
+  configPath: string;
+  exists: boolean;
+  contentRead: false;
+  source: "manifest" | "known-path";
+  appPath?: string;
+  appExists?: boolean;
+};
+
+export type EditorAppInspection = {
+  name: string;
+  appPath: string;
+  exists: boolean;
+  source: "manifest";
+};
+
+export type SetupManifestInspection = {
+  path: string;
+  exists: boolean;
+  valid: boolean;
+  contentRead: boolean;
+  errors: string[];
+  provided: {
+    h5?: {
+      url?: string;
+      connectOverCDP?: string;
+      browserPath?: string;
+    };
+    weixin?: {
+      cliPath?: string;
+      projectPath?: string;
+    };
+    mcpClients: Array<{
+      name: string;
+      configPath?: string;
+      appPath?: string;
+    }>;
+    editorApps: Array<{
+      name: string;
+      appPath: string;
+    }>;
+  };
+};
+
+export type SecurityInspection = {
+  policy: "safe-local-discovery";
+  inspected: string[];
+  skipped: string[];
+};
+
 export type EnvironmentInspection = {
   cwd: string;
-  packageManager?: "pnpm" | "npm" | "yarn" | "bun";
+  packageManager?: PackageManager;
   packageJson?: {
     name?: string;
     scripts: Record<string, string>;
@@ -225,6 +345,13 @@ export type EnvironmentInspection = {
     file: string;
   }>;
   blockers: string[];
+  setupBlockers: SetupBlocker[];
+  setupManifest: SetupManifestInspection;
+  toolchain: ToolchainInspection;
+  ports: PortInspection[];
+  mcpClients: McpClientInspection[];
+  editorApps: EditorAppInspection[];
+  security: SecurityInspection;
 };
 
 export type TargetValidationResult = {
@@ -234,4 +361,5 @@ export type TargetValidationResult = {
   reachable?: boolean;
   status?: number;
   blockers: string[];
+  setupBlockers?: SetupBlocker[];
 };

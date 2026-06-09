@@ -130,6 +130,7 @@ export const PeekitTargetConfigSchema = z.object({
   ticket: z.string().optional(),
   trustProject: z.boolean().optional(),
   browser: z.enum(["chromium", "firefox", "webkit"]).optional(),
+  browserPath: z.string().optional(),
   headless: z.boolean().optional(),
   viewport: ViewportSchema.optional(),
   connectOverCDP: z.string().optional(),

@@ -79,32 +79,52 @@ describe("MCP tool contract", () => {
       cwd: string;
       packageJson?: { name?: string };
       blockers: string[];
+      toolchain: { node: { version: string } };
+      ports: unknown[];
+      mcpClients: unknown[];
+      editorApps: unknown[];
+      setupManifest: { path: string; exists: boolean; contentRead: boolean };
+      security: { policy: string; skipped: string[] };
+      setupBlockers: Array<{ code: string }>;
     }>("peekit_inspect_environment", { cwd: repoRoot });
     expect(environment.cwd).toBe(repoRoot);
     expect(environment.packageJson?.name).toBe("peekit-workspace");
     expect(environment.blockers).toEqual(expect.any(Array));
+    expect(environment.toolchain.node.version).toBe(process.version);
+    expect(environment.ports).toEqual(expect.any(Array));
+    expect(environment.mcpClients).toEqual(expect.any(Array));
+    expect(environment.editorApps).toEqual(expect.any(Array));
+    expect(environment.setupManifest.path).toContain(".peekit");
+    expect(environment.setupManifest.contentRead).toBe(environment.setupManifest.exists);
+    expect(environment.security.policy).toBe("safe-local-discovery");
+    expect(environment.security.skipped).toEqual(expect.arrayContaining(["full disk scans"]));
+    expect(environment.setupBlockers).toEqual(expect.any(Array));
 
     const suggested = await call<{
-      suggestions: Array<{ type: string; url?: string }>;
+      suggestions: Array<{ type: string; url?: string; metadata?: Record<string, unknown> }>;
     }>("peekit_suggest_target_config", {
       cwd: h5ExampleRoot,
       preferredKind: "h5"
     });
     expect(suggested.suggestions[0]).toMatchObject({
       type: "h5",
-      url: "http://localhost:5173"
+      url: "http://localhost:5173",
+      metadata: {
+        source: "package-script"
+      }
     });
 
     const validationTarget = {
       type: "h5",
       connectOverCDP: "ws://localhost:9222/devtools/browser/contract"
     };
-    const validation = await call<{ valid: boolean; blockers: string[] }>(
+    const validation = await call<{ valid: boolean; blockers: string[]; setupBlockers: unknown[] }>(
       "peekit_validate_target",
       { target: validationTarget }
     );
     expect(validation.valid).toBe(true);
     expect(validation.blockers).toEqual([]);
+    expect(validation.setupBlockers).toEqual([]);
 
     const blocker = await call<{ explanation: string }>("peekit_explain_setup_blocker", {
       target: validationTarget
