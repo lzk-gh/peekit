@@ -66,7 +66,7 @@ describe("MCP tool contract", () => {
   });
 
   it("runs every tool through a stable minimal runtime flow", async () => {
-    const runtime = new PeekitMcpRuntime([new FakeH5Adapter()]);
+    const runtime = new PeekitMcpRuntime([new FakeH5Adapter()], { persistCases: false });
     const calledTools = new Set<string>();
     const call = async <T>(name: string, args: unknown): Promise<T> => {
       calledTools.add(name);
@@ -244,7 +244,7 @@ describe("MCP tool contract", () => {
   });
 
   it("keeps missing runtime state failures explicit", async () => {
-    const runtime = new PeekitMcpRuntime([new FakeH5Adapter()]);
+    const runtime = new PeekitMcpRuntime([new FakeH5Adapter()], { persistCases: false });
 
     await expect(runtime.callTool("peekit_get_current_page", {})).rejects.toThrow(
       "No active Peekit target"

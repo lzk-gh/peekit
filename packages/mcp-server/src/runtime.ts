@@ -27,15 +27,11 @@ import {
   type TargetKind,
   type TargetValidationResult
 } from "@peekit/core";
+import { JsonCaseStore, type RecordedCase } from "./case-store.js";
 
-type RecordedCase = {
-  id: string;
-  name: string;
-  createdAt: string;
-  targetId?: string;
-  steps: InteractionRequest[];
-  snapshotIds: string[];
-  notes?: string;
+export type PeekitMcpRuntimeOptions = {
+  caseStorePath?: string;
+  persistCases?: boolean;
 };
 
 export class PeekitMcpRuntime {
@@ -43,12 +39,18 @@ export class PeekitMcpRuntime {
   private readonly sessions = new Map<string, AdapterSession>();
   private readonly snapshots = new Map<string, RuntimeSnapshot>();
   private readonly cases = new Map<string, RecordedCase>();
+  private readonly caseStore?: JsonCaseStore;
+  private casesLoaded = false;
   private activeTargetId?: string;
 
-  constructor(adapters: PeekitAdapter[] = defaultAdapters()) {
+  constructor(adapters: PeekitAdapter[] = defaultAdapters(), options: PeekitMcpRuntimeOptions = {}) {
     for (const adapter of adapters) {
       this.adapters.set(adapter.kind, adapter);
     }
+    this.caseStore =
+      options.persistCases === false
+        ? undefined
+        : new JsonCaseStore(options.caseStorePath);
   }
 
   async callTool(name: string, args: unknown): Promise<unknown> {
@@ -252,9 +254,10 @@ export class PeekitMcpRuntime {
     };
   }
 
-  private recordCase(args: unknown): RecordedCase {
+  private async recordCase(args: unknown): Promise<RecordedCase> {
     const record = asRecord(args);
     const name = requireString(record, "name");
+    await this.loadCases();
     const steps = Array.isArray(record.steps)
       ? record.steps.map((step) => InteractionRequestSchema.parse(step))
       : [];
@@ -274,12 +277,13 @@ export class PeekitMcpRuntime {
     };
 
     this.cases.set(stored.id, stored);
+    await this.saveCases();
     return stored;
   }
 
   private async replayCase(args: unknown) {
     const record = asRecord(args);
-    const stored = this.findCase(record);
+    const stored = await this.findCase(record);
 
     if (!stored) {
       throw new Error("Recorded case not found");
@@ -377,7 +381,9 @@ export class PeekitMcpRuntime {
     throw new Error("No active Peekit target. Call peekit_connect_target first.");
   }
 
-  private findCase(record: Record<string, unknown>): RecordedCase | undefined {
+  private async findCase(record: Record<string, unknown>): Promise<RecordedCase | undefined> {
+    await this.loadCases();
+
     if (typeof record.caseId === "string") {
       return this.cases.get(record.caseId);
     }
@@ -387,6 +393,25 @@ export class PeekitMcpRuntime {
     }
 
     return undefined;
+  }
+
+  private async loadCases(): Promise<void> {
+    if (this.casesLoaded || !this.caseStore) {
+      return;
+    }
+
+    for (const recordedCase of await this.caseStore.load()) {
+      this.cases.set(recordedCase.id, recordedCase);
+    }
+    this.casesLoaded = true;
+  }
+
+  private async saveCases(): Promise<void> {
+    if (!this.caseStore) {
+      return;
+    }
+
+    await this.caseStore.save([...this.cases.values()]);
   }
 }
 

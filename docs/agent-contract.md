@@ -69,3 +69,9 @@ Unsupported capability must be explicit:
 ```
 
 Agents should treat unsupported fields as evidence, not as failure to be hidden.
+
+## Case Persistence
+
+`peekit_record_case` persists cases to `.peekit/cases.json` by default for the current MCP working directory. The server also keeps a hot in-memory cache during the process lifetime.
+
+`peekit_replay_case` can replay a case recorded by an earlier MCP server process when the same case store is available and a compatible target is connected.
