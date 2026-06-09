@@ -102,6 +102,7 @@ export class H5Adapter implements PeekitAdapter {
     } else {
       browser = await browserType(browserName).launch({
         headless: config.headless ?? true,
+        ...(config.browserPath ? { executablePath: config.browserPath } : {}),
         timeout: timeoutMs
       });
       context = await browser.newContext(contextOptions(config));

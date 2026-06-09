@@ -7,3 +7,4 @@ coverage/
 .DS_Store
 npm-debug.log*
 pnpm-debug.log*
+.peekit/local-setup.json

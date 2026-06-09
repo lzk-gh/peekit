@@ -14,7 +14,39 @@ export function suggestTargetConfigs(
   const suggestions: PeekitTargetConfig[] = [];
 
   if (!preferredKind || preferredKind === "h5") {
+    const manifestH5 = environment.setupManifest.provided.h5;
+    const availableBrowser = environment.toolchain.browsers.find((browser) => browser.available);
+    if (manifestH5 && (manifestH5.url || manifestH5.connectOverCDP)) {
+      suggestions.push({
+        id: "h5:manifest",
+        name: "H5 (local setup manifest)",
+        type: "h5",
+        ...(manifestH5.url ? { url: manifestH5.url } : {}),
+        ...(manifestH5.connectOverCDP ? { connectOverCDP: manifestH5.connectOverCDP } : {}),
+        rootDir: environment.cwd,
+        browser: "chromium",
+        ...(manifestH5.browserPath ? { browserPath: manifestH5.browserPath } : {}),
+        headless: true,
+        metadata: {
+          source: "manifest",
+          confidence: "high",
+          requiresUserAction:
+            environment.ports.some((port) => port.source === "manifest" && !port.reachable) ||
+            Boolean(
+              manifestH5.browserPath &&
+                environment.toolchain.browsers.some(
+                  (browser) => browser.source === "manifest" && !browser.available
+                )
+            ),
+          ...(manifestH5.browserPath ? { browserPath: manifestH5.browserPath } : {})
+        }
+      });
+    }
+
     for (const hint of environment.devServerHints) {
+      if (manifestH5?.url === hint.likelyUrl) {
+        continue;
+      }
       suggestions.push({
         id: `h5:${hint.likelyUrl ?? hint.script}`,
         name: `H5 (${hint.script})`,
@@ -22,6 +54,7 @@ export function suggestTargetConfigs(
         url: hint.likelyUrl,
         rootDir: environment.cwd,
         browser: "chromium",
+        ...(availableBrowser?.path ? { browserPath: availableBrowser.path } : {}),
         headless: true,
         metadata: {
           script: hint.script,
@@ -31,9 +64,7 @@ export function suggestTargetConfigs(
           requiresUserAction:
             !hint.likelyUrl ||
             environment.ports.some((port) => port.url === hint.likelyUrl && !port.reachable),
-          browser:
-            environment.toolchain.browsers.find((browser) => browser.available)?.name ??
-            "playwright-chromium"
+          browser: availableBrowser?.name ?? "playwright-chromium"
         }
       });
     }
@@ -42,9 +73,34 @@ export function suggestTargetConfigs(
   const weixinCli = environment.toolchain.miniProgramDevTools.find(
     (tool) => tool.platform === "mp-weixin" && tool.available
   )?.cliPath;
+  const manifestWeixin = environment.setupManifest.provided.weixin;
+
+  if ((!preferredKind || preferredKind === "mp-weixin") && manifestWeixin) {
+    suggestions.push({
+      id: "mp-weixin:manifest",
+      name: "mp-weixin (local setup manifest)",
+      type: "mp-weixin",
+      rootDir: environment.cwd,
+      ...(manifestWeixin.projectPath ? { projectPath: manifestWeixin.projectPath } : {}),
+      ...(manifestWeixin.cliPath ? { cliPath: manifestWeixin.cliPath } : {}),
+      metadata: {
+        source: "manifest",
+        confidence: manifestWeixin.projectPath && manifestWeixin.cliPath ? "high" : "medium",
+        requiresUserAction:
+          !manifestWeixin.projectPath ||
+          !manifestWeixin.cliPath ||
+          environment.toolchain.miniProgramDevTools.some(
+            (tool) => tool.source === "manifest" && !tool.available
+          )
+      }
+    });
+  }
 
   for (const hint of environment.miniProgramHints) {
     if (preferredKind && preferredKind !== hint.platform) {
+      continue;
+    }
+    if (hint.platform === "mp-weixin" && manifestWeixin) {
       continue;
     }
     suggestions.push({
@@ -154,6 +210,27 @@ export async function validateTargetConfig(
   if (!target.url) {
     return {
       valid: true,
+      target,
+      checkedAt,
+      blockers,
+      setupBlockers
+    };
+  }
+
+  if (target.browserPath && !(await pathExists(target.browserPath))) {
+    blockers.push(`browserPath does not exist: ${target.browserPath}`);
+    setupBlockers.push({
+      code: "missing_tool",
+      severity: "error",
+      message: `Configured H5 browser path does not exist: ${target.browserPath}`,
+      remediation: "Update browserPath in .peekit/local-setup.json or omit it to use Playwright defaults.",
+      target: "h5",
+      evidence: {
+        path: target.browserPath
+      }
+    });
+    return {
+      valid: false,
       target,
       checkedAt,
       blockers,

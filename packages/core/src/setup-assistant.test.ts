@@ -96,6 +96,135 @@ describe("AI setup assistant discovery", () => {
     }
   });
 
+  it("prefers user-provided local setup manifest before fallback discovery", async () => {
+    const manifestPort = await getFreePort();
+    const fallbackPort = await getFreePort();
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { "Content-Type": "text/plain" });
+      response.end("ok");
+    });
+    await listen(server, manifestPort);
+
+    try {
+      const root = await tempDir();
+      const browserPath = join(root, "chrome.exe");
+      const cliPath = join(root, "wechat-cli.bat");
+      const appPath = join(root, "Cursor.exe");
+      const clientConfig = join(root, "cursor-mcp.json");
+
+      await mkdir(join(root, ".peekit"), { recursive: true });
+      await writeFile(browserPath, "", "utf8");
+      await writeFile(cliPath, "", "utf8");
+      await writeFile(appPath, "", "utf8");
+      await writeFile(clientConfig, '{"token":"DO_NOT_READ"}', "utf8");
+      await writeFile(
+        join(root, "package.json"),
+        JSON.stringify({
+          name: "manifest-first",
+          scripts: {
+            dev: `vite --port ${fallbackPort}`
+          },
+          devDependencies: {
+            vite: "latest"
+          }
+        }),
+        "utf8"
+      );
+      await writeFile(
+        join(root, ".peekit", "local-setup.json"),
+        JSON.stringify({
+          version: 1,
+          h5: {
+            url: `http://localhost:${manifestPort}`,
+            browserPath
+          },
+          weixin: {
+            cliPath,
+            projectPath: root
+          },
+          mcpClients: [
+            {
+              name: "Cursor",
+              configPath: clientConfig,
+              appPath
+            }
+          ],
+          editorApps: [
+            {
+              name: "Cursor",
+              appPath
+            }
+          ]
+        }),
+        "utf8"
+      );
+
+      const environment = await inspectProjectEnvironment(root);
+
+      expect(environment.setupManifest).toMatchObject({
+        exists: true,
+        valid: true,
+        contentRead: true
+      });
+      expect(environment.ports.map((port) => port.url)).toEqual([
+        `http://localhost:${manifestPort}`
+      ]);
+      expect(environment.toolchain.browsers[0]).toMatchObject({
+        path: browserPath,
+        available: true,
+        source: "manifest"
+      });
+      expect(environment.toolchain.miniProgramDevTools[0]).toMatchObject({
+        cliPath,
+        available: true,
+        source: "manifest"
+      });
+      expect(environment.mcpClients).toEqual([
+        expect.objectContaining({
+          name: "Cursor",
+          configPath: clientConfig,
+          exists: true,
+          contentRead: false,
+          source: "manifest",
+          appPath,
+          appExists: true
+        })
+      ]);
+      expect(environment.editorApps).toEqual([
+        expect.objectContaining({
+          name: "Cursor",
+          appPath,
+          exists: true,
+          source: "manifest"
+        })
+      ]);
+      expect(JSON.stringify(environment)).not.toContain("DO_NOT_READ");
+
+      expect(suggestTargetConfigs(environment, "h5")[0]).toMatchObject({
+        type: "h5",
+        url: `http://localhost:${manifestPort}`,
+        browserPath,
+        metadata: {
+          source: "manifest",
+          confidence: "high",
+          requiresUserAction: false
+        }
+      });
+      expect(suggestTargetConfigs(environment, "mp-weixin")[0]).toMatchObject({
+        type: "mp-weixin",
+        projectPath: root,
+        cliPath,
+        metadata: {
+          source: "manifest",
+          confidence: "high",
+          requiresUserAction: false
+        }
+      });
+    } finally {
+      await close(server);
+    }
+  });
+
   it("reports unreachable inferred dev server ports as setup blockers", async () => {
     const port = await getFreePort();
     const root = await tempDir();
@@ -124,6 +253,41 @@ describe("AI setup assistant discovery", () => {
         expect.objectContaining({
           code: "port_unreachable",
           target: "h5"
+        })
+      ])
+    );
+  });
+
+  it("reports malformed local setup manifests without stopping fallback discovery", async () => {
+    const root = await tempDir();
+    await mkdir(join(root, ".peekit"), { recursive: true });
+    await writeFile(join(root, ".peekit", "local-setup.json"), "{", "utf8");
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        name: "malformed-manifest",
+        scripts: {
+          dev: "vite --port 5199"
+        },
+        devDependencies: {
+          vite: "latest"
+        }
+      }),
+      "utf8"
+    );
+
+    const environment = await inspectProjectEnvironment(root);
+
+    expect(environment.setupManifest).toMatchObject({
+      exists: true,
+      valid: false,
+      contentRead: true
+    });
+    expect(environment.ports[0]?.url).toBe("http://localhost:5199");
+    expect(environment.setupBlockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "invalid_setup_manifest"
         })
       ])
     );
@@ -170,6 +334,17 @@ describe("AI setup assistant discovery", () => {
     ).resolves.toMatchObject({
       valid: false,
       setupBlockers: [expect.objectContaining({ code: "invalid_target" })]
+    });
+
+    await expect(
+      validateTargetConfig({
+        type: "h5",
+        url: "http://localhost:1",
+        browserPath: join(await tempDir(), "missing-browser.exe")
+      })
+    ).resolves.toMatchObject({
+      valid: false,
+      setupBlockers: [expect.objectContaining({ code: "missing_tool" })]
     });
 
     await expect(

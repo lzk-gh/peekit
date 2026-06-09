@@ -114,6 +114,7 @@ export type PeekitTargetConfig = {
   ticket?: string;
   trustProject?: boolean;
   browser?: "chromium" | "firefox" | "webkit";
+  browserPath?: string;
   headless?: boolean;
   viewport?: Viewport;
   connectOverCDP?: string;
@@ -214,7 +215,8 @@ export type SetupBlockerCode =
   | "port_unreachable"
   | "permission_required"
   | "unsupported_platform"
-  | "invalid_target";
+  | "invalid_target"
+  | "invalid_setup_manifest";
 
 export type SetupBlocker = {
   code: SetupBlockerCode;
@@ -261,14 +263,14 @@ export type ToolchainInspection = {
     name: "chromium" | "chrome" | "edge";
     available: boolean;
     path?: string;
-    source: "env" | "path" | "common-path" | "playwright-cache";
+    source: "manifest" | "env" | "path" | "common-path" | "playwright-cache";
   }>;
   miniProgramDevTools: Array<{
     platform: TargetKind;
     name: string;
     available: boolean;
     cliPath?: string;
-    source: "env" | "path" | "common-path";
+    source: "manifest" | "env" | "path" | "common-path";
   }>;
 };
 
@@ -277,6 +279,44 @@ export type McpClientInspection = {
   configPath: string;
   exists: boolean;
   contentRead: false;
+  source: "manifest" | "known-path";
+  appPath?: string;
+  appExists?: boolean;
+};
+
+export type EditorAppInspection = {
+  name: string;
+  appPath: string;
+  exists: boolean;
+  source: "manifest";
+};
+
+export type SetupManifestInspection = {
+  path: string;
+  exists: boolean;
+  valid: boolean;
+  contentRead: boolean;
+  errors: string[];
+  provided: {
+    h5?: {
+      url?: string;
+      connectOverCDP?: string;
+      browserPath?: string;
+    };
+    weixin?: {
+      cliPath?: string;
+      projectPath?: string;
+    };
+    mcpClients: Array<{
+      name: string;
+      configPath?: string;
+      appPath?: string;
+    }>;
+    editorApps: Array<{
+      name: string;
+      appPath: string;
+    }>;
+  };
 };
 
 export type SecurityInspection = {
@@ -306,9 +346,11 @@ export type EnvironmentInspection = {
   }>;
   blockers: string[];
   setupBlockers: SetupBlocker[];
+  setupManifest: SetupManifestInspection;
   toolchain: ToolchainInspection;
   ports: PortInspection[];
   mcpClients: McpClientInspection[];
+  editorApps: EditorAppInspection[];
   security: SecurityInspection;
 };
 

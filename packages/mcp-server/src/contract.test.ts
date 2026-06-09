@@ -82,6 +82,8 @@ describe("MCP tool contract", () => {
       toolchain: { node: { version: string } };
       ports: unknown[];
       mcpClients: unknown[];
+      editorApps: unknown[];
+      setupManifest: { path: string; exists: boolean; contentRead: boolean };
       security: { policy: string; skipped: string[] };
       setupBlockers: Array<{ code: string }>;
     }>("peekit_inspect_environment", { cwd: repoRoot });
@@ -91,6 +93,9 @@ describe("MCP tool contract", () => {
     expect(environment.toolchain.node.version).toBe(process.version);
     expect(environment.ports).toEqual(expect.any(Array));
     expect(environment.mcpClients).toEqual(expect.any(Array));
+    expect(environment.editorApps).toEqual(expect.any(Array));
+    expect(environment.setupManifest.path).toContain(".peekit");
+    expect(environment.setupManifest.contentRead).toBe(environment.setupManifest.exists);
     expect(environment.security.policy).toBe("safe-local-discovery");
     expect(environment.security.skipped).toEqual(expect.arrayContaining(["full disk scans"]));
     expect(environment.setupBlockers).toEqual(expect.any(Array));
