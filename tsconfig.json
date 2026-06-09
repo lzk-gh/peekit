@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/reporter" },
+    { "path": "./packages/adapter-h5" },
+    { "path": "./packages/adapter-mp-weixin" },
+    { "path": "./packages/adapter-mp-alipay" },
+    { "path": "./packages/adapter-mp-bytedance" },
+    { "path": "./packages/adapter-mp-qq" },
+    { "path": "./packages/mcp-server" }
+  ]
+}

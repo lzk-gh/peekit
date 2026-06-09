@@ -1,0 +1,19 @@
+{
+  "name": "peekit-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Peekit monorepo. Runtime eyes for AI agents.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "test": "vitest run",
+    "check": "pnpm build && pnpm test"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.8"
+  },
+  "packageManager": "pnpm@10.0.0"
+}

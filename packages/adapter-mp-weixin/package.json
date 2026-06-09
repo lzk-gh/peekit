@@ -1,0 +1,26 @@
+{
+  "name": "@peekit/adapter-mp-weixin",
+  "version": "0.1.0",
+  "description": "Weixin Mini Program adapter entry for Peekit.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "@peekit/core": "workspace:*",
+    "miniprogram-automator": "0.12.1"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

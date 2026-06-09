@@ -1,0 +1,38 @@
+{
+  "name": "peekit",
+  "version": "0.1.0",
+  "description": "Peekit MCP server. Runtime eyes for AI agents.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "bin": {
+    "peekit": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@peekit/adapter-h5": "workspace:*",
+    "@peekit/adapter-mp-alipay": "workspace:*",
+    "@peekit/adapter-mp-bytedance": "workspace:*",
+    "@peekit/adapter-mp-qq": "workspace:*",
+    "@peekit/adapter-mp-weixin": "workspace:*",
+    "@peekit/core": "workspace:*",
+    "@peekit/reporter": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.8"
+  }
+}

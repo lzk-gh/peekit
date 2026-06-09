@@ -1,0 +1,27 @@
+{
+  "name": "@peekit/adapter-h5",
+  "version": "0.1.0",
+  "description": "Playwright-powered H5 runtime adapter for Peekit.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "@peekit/core": "workspace:*",
+    "playwright": "1.60.0"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.2",
+    "typescript": "6.0.3"
+  }
+}

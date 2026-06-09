@@ -1,0 +1,8 @@
+{
+  "name": "peekit-h5-basic-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx vite --host 127.0.0.1 --port 5173"
+  }
+}

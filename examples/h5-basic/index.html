@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Peekit H5 Basic</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f7f8fb;
+        color: #1c2430;
+      }
+
+      main {
+        max-width: 720px;
+        margin: 64px auto;
+        padding: 0 24px;
+      }
+
+      button {
+        min-width: 120px;
+        height: 40px;
+        border: 0;
+        border-radius: 6px;
+        background: #1264d8;
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button.loading {
+        background: #5c667a;
+        cursor: wait;
+      }
+
+      .status {
+        margin-top: 16px;
+        color: #445064;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Peekit H5 Basic</h1>
+      <button id="submit" data-testid="submit-button">Submit</button>
+      <p class="status" data-testid="status">Idle</p>
+    </main>
+    <script>
+      const button = document.querySelector("#submit");
+      const status = document.querySelector("[data-testid='status']");
+
+      button.addEventListener("click", () => {
+        button.classList.add("loading");
+        button.textContent = "Loading";
+        status.textContent = "Request in progress";
+        console.info("submit clicked");
+      });
+    </script>
+  </body>
+</html>

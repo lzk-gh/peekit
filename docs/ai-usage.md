@@ -1,0 +1,58 @@
+# AI Usage
+
+Peekit is built for agentic coding loops. The developer should be able to describe a UI problem in natural language while the agent performs runtime inspection through MCP tools.
+
+## Standard Agent Loop
+
+```txt
+understand user issue
+-> inspect environment
+-> connect target runtime
+-> open page or detect current page
+-> query relevant elements
+-> capture runtime snapshot
+-> perform interaction if needed
+-> capture after snapshot
+-> compare evidence
+-> diagnose likely cause
+-> modify code
+-> recapture
+-> report measured result
+```
+
+The agent should not ask the developer to manually run probe commands when the MCP server is available. It should call Peekit tools directly and cite measured evidence in its final answer.
+
+## Useful Tool Sequences
+
+Initial setup:
+
+```txt
+peekit_inspect_environment
+peekit_suggest_target_config
+peekit_validate_target
+peekit_connect_target
+```
+
+Element state investigation:
+
+```txt
+peekit_query_element
+peekit_capture_snapshot
+peekit_perform_interaction
+peekit_capture_snapshot
+peekit_compare_snapshots
+peekit_diagnose_issue
+```
+
+Fix verification:
+
+```txt
+peekit_capture_snapshot before
+modify code
+peekit_capture_snapshot after
+peekit_compare_snapshots
+```
+
+## Reporting Rule
+
+The agent's final response should say what changed and include measured runtime facts such as text, className, rect, computed style fields, console errors, and before/after diff summaries.

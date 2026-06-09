@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "references": [
+    { "path": "../core" },
+    { "path": "../reporter" },
+    { "path": "../adapter-h5" },
+    { "path": "../adapter-mp-weixin" },
+    { "path": "../adapter-mp-alipay" },
+    { "path": "../adapter-mp-bytedance" },
+    { "path": "../adapter-mp-qq" }
+  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "**/*.test.ts"]
+}
