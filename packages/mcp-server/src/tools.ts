@@ -57,7 +57,7 @@ const targetIdProperty = {
 export const PEEKIT_TOOLS: PeekitToolDefinition[] = [
   {
     name: "peekit_inspect_environment",
-    description: "Inspect project type, package manager, dev server hints, and setup blockers.",
+    description: "Safely inspect project type, local toolchain, loopback ports, MCP client paths, and setup blockers.",
     inputSchema: {
       type: "object",
       properties: {
@@ -67,7 +67,7 @@ export const PEEKIT_TOOLS: PeekitToolDefinition[] = [
   },
   {
     name: "peekit_suggest_target_config",
-    description: "Suggest H5 or mini program target configs from environment evidence.",
+    description: "Suggest H5 or mini program target configs from safe local environment evidence.",
     inputSchema: {
       type: "object",
       properties: {
@@ -81,7 +81,7 @@ export const PEEKIT_TOOLS: PeekitToolDefinition[] = [
   },
   {
     name: "peekit_validate_target",
-    description: "Validate whether a target config is connectable.",
+    description: "Validate whether a target config is safely connectable and report structured setup blockers.",
     inputSchema: {
       type: "object",
       properties: {
@@ -92,7 +92,7 @@ export const PEEKIT_TOOLS: PeekitToolDefinition[] = [
   },
   {
     name: "peekit_explain_setup_blocker",
-    description: "Explain a target validation failure in agent-readable language.",
+    description: "Explain setup blockers in agent-readable language with remediation guidance.",
     inputSchema: {
       type: "object",
       properties: {

@@ -33,6 +33,8 @@ peekit_validate_target
 peekit_connect_target
 ```
 
+Setup tools use safe local discovery. Peekit inspects the project directory, PATH, selected environment variables, common local tool locations, loopback ports, and MCP client config path existence. It does not run full disk scans, read secrets, read editor config contents, scan public networks, or write editor configuration.
+
 Element state investigation:
 
 ```txt
