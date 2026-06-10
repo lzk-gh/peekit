@@ -16,4 +16,5 @@
     value="{{name}}"
     bindinput="onNameInput"
   />
+  <view id="spacer" class="spacer" data-testid="scroll-spacer">Scroll fixture</view>
 </view>

@@ -238,12 +238,125 @@ describe("WeixinMiniProgramAdapter real smoke", () => {
       const smokeSession = await createWeixinMiniProgramAdapter().connect(config);
 
       try {
+        const opened = await withTimeout(
+          smokeSession.openPage("/pages/index/index"),
+          10_000,
+          "openPage"
+        );
+        expect(opened.page.route).toBe("pages/index/index");
+
         const page = await withTimeout(smokeSession.getCurrentPage(), 10_000, "getCurrentPage");
         expect(page.target).toBe("mp-weixin:smoke");
         expect(page.targetType).toBe("mp-weixin");
         expect(page.page).toEqual(expect.any(Object));
         expect(page.console).toEqual(expect.any(Array));
         expect(page.errors).toEqual(expect.any(Array));
+
+        const button = await withTimeout(
+          smokeSession.queryElement("#submit"),
+          10_000,
+          "queryElement #submit"
+        );
+        expect(button.element).toMatchObject({
+          selector: "#submit",
+          tag: "button"
+        });
+        expect(button.element?.text).toContain("Submit");
+        expect(button.element?.markup).toContain("submit-button");
+        expect(button.element?.rect?.width).toBeGreaterThan(0);
+
+        const allElements = await withTimeout(
+          smokeSession.queryAll("#submit, #status, #name", { maxResults: 2 }),
+          10_000,
+          "queryAll fixture elements"
+        );
+        expect(allElements).toHaveLength(2);
+        expect(allElements[0]?.element?.selector).toBe("#submit, #status, #name");
+
+        const snapshot = await withTimeout(
+          smokeSession.captureSnapshot({
+            selectors: ["#submit", "#status", "#name"],
+            maxElements: 3
+          }),
+          10_000,
+          "captureSnapshot"
+        );
+        expect(snapshot.kind).toBe("snapshot");
+        expect(snapshot.elements.map((element) => element.selector)).toEqual([
+          "#submit",
+          "#status",
+          "#name"
+        ]);
+
+        const tap = await withTimeout(
+          smokeSession.performInteraction({
+            action: "tap",
+            selector: "#submit",
+            waitAfterMs: 500
+          }),
+          15_000,
+          "perform tap"
+        );
+        expect(tap.interaction?.action).toBe("tap");
+        expect(tap.element?.text).toContain("Loading");
+        expect(tap.console).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              type: "info",
+              text: expect.stringContaining("submit clicked")
+            })
+          ])
+        );
+
+        const status = await withTimeout(
+          smokeSession.queryElement("#status"),
+          10_000,
+          "queryElement #status"
+        );
+        expect(status.element?.text).toContain("Request in progress");
+
+        const input = await withTimeout(
+          smokeSession.performInteraction({
+            action: "input",
+            selector: "#name",
+            value: "Ada Lovelace",
+            waitAfterMs: 500
+          }),
+          15_000,
+          "perform input"
+        );
+        expect(input.interaction?.action).toBe("input");
+        expect(input.element?.state?.value).toBe("Ada Lovelace");
+
+        await withTimeout(
+          smokeSession.performInteraction({
+            action: "scroll",
+            scroll: { y: 600 },
+            waitAfterMs: 500
+          }),
+          15_000,
+          "perform scroll"
+        );
+        const scrolled = await withTimeout(
+          smokeSession.getCurrentPage(),
+          10_000,
+          "getCurrentPage after scroll"
+        );
+        expect(scrolled.page.scroll?.y ?? 0).toBeGreaterThanOrEqual(0);
+
+        const missing = await withTimeout(
+          smokeSession.queryElement("#missing"),
+          10_000,
+          "queryElement missing"
+        );
+        expect(missing.errors).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              source: "wxml",
+              message: "Element not found: #missing"
+            })
+          ])
+        );
       } finally {
         await smokeSession.close();
       }
