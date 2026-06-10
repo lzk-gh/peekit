@@ -1,4 +1,8 @@
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { EventEmitter } from "node:events";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import automator from "miniprogram-automator";
 import {
   WEIXIN_MINI_PROGRAM_CAPABILITIES,
@@ -37,19 +41,23 @@ const STYLE_FIELDS = [
 ];
 
 const DEFAULT_DISCOVERY_SELECTOR = "view,button,input,textarea,text,scroll-view,image";
+const DEFAULT_WEIXIN_AUTOMATION_PORT = 9420;
 
 type AutomatorLike = {
   connect(options: { wsEndpoint: string }): Promise<MiniProgramLike>;
-  launch(options: {
-    cliPath?: string;
-    timeout?: number;
-    port?: number;
-    account?: string;
-    ticket?: string;
-    projectPath: string;
-    trustProject?: boolean;
-    cwd?: string;
-  }): Promise<MiniProgramLike>;
+  launch(options: AutomatorLaunchOptions): Promise<MiniProgramLike>;
+};
+
+type AutomatorLaunchOptions = {
+  cliPath?: string;
+  args?: string[];
+  timeout?: number;
+  port?: number;
+  account?: string;
+  ticket?: string;
+  projectPath: string;
+  trustProject?: boolean;
+  cwd?: string;
 };
 
 type MiniProgramLike = {
@@ -109,8 +117,10 @@ export class WeixinMiniProgramAdapter implements PeekitAdapter {
   readonly capabilities = WEIXIN_MINI_PROGRAM_CAPABILITIES;
   readonly capabilityLevel = capabilityLevelFromCapabilities(this.capabilities);
   private readonly api: AutomatorLike;
+  private readonly hasInjectedAutomator: boolean;
 
   constructor(options: WeixinMiniProgramAdapterOptions = {}) {
+    this.hasInjectedAutomator = options.automator !== undefined;
     this.api = (options.automator ?? automator) as AutomatorLike;
   }
 
@@ -123,16 +133,9 @@ export class WeixinMiniProgramAdapter implements PeekitAdapter {
 
     const miniProgram = config.wsEndpoint
       ? await this.api.connect({ wsEndpoint: config.wsEndpoint })
-      : await this.api.launch({
-          projectPath: config.projectPath ?? config.rootDir ?? "",
-          ...(config.cliPath ? { cliPath: config.cliPath } : {}),
-          ...(config.port ? { port: config.port } : {}),
-          ...(config.account ? { account: config.account } : {}),
-          ...(config.ticket ? { ticket: config.ticket } : {}),
-          ...(config.rootDir ? { cwd: config.rootDir } : {}),
-          trustProject: config.trustProject ?? true,
-          timeout
-        });
+      : this.shouldLaunchWithWindowsCli(config)
+        ? await this.launchWithWindowsCli(config, timeout)
+        : await this.api.launch(buildLaunchOptions(config, timeout));
 
     const target: ConnectedTarget = {
       id: config.id ?? `mp-weixin:${config.projectPath ?? config.rootDir ?? config.wsEndpoint ?? randomUUID()}`,
@@ -151,6 +154,173 @@ export class WeixinMiniProgramAdapter implements PeekitAdapter {
     }
     return session;
   }
+
+  private shouldLaunchWithWindowsCli(config: PeekitTargetConfig): boolean {
+    return (
+      !this.hasInjectedAutomator &&
+      process.platform === "win32" &&
+      config.cliPath !== undefined &&
+      isWindowsCommandScript(config.cliPath)
+    );
+  }
+
+  private async launchWithWindowsCli(
+    config: PeekitTargetConfig,
+    timeout: number
+  ): Promise<MiniProgramLike> {
+    const cliPath = config.cliPath;
+    if (!cliPath) {
+      throw new Error("mp-weixin Windows CLI launch needs cliPath");
+    }
+
+    const projectPath = config.projectPath ?? config.rootDir ?? "";
+    const port = config.port ?? DEFAULT_WEIXIN_AUTOMATION_PORT;
+    const command = resolveWindowsCliCommand(cliPath);
+    const args = [
+      ...command.argsPrefix,
+      "auto",
+      "--project",
+      projectPath,
+      "--auto-port",
+      String(port),
+      ...(config.ticket ? ["--ticket", config.ticket] : []),
+      ...(config.trustProject ?? true ? ["--trust-project"] : [])
+    ];
+
+    const child = spawn(command.executable, args, {
+      cwd: config.rootDir,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true
+    });
+    let launchError: Error | undefined;
+    let launchExitCode: number | null | undefined;
+    let launchOutput = "";
+    child.on("error", (error) => {
+      launchError = error;
+    });
+    child.on("exit", (code) => {
+      launchExitCode = code;
+    });
+    child.stdout?.on("data", (chunk: Buffer) => {
+      launchOutput = compactLaunchOutput(`${launchOutput}${chunk.toString("utf8")}`);
+    });
+    child.stderr?.on("data", (chunk: Buffer) => {
+      launchOutput = compactLaunchOutput(`${launchOutput}${chunk.toString("utf8")}`);
+    });
+
+    const miniProgram = await this.waitForConnection(`ws://127.0.0.1:${port}`, timeout, () => {
+      if (launchError) {
+        return launchError;
+      }
+      if (launchExitCode && launchExitCode !== 0) {
+        return new Error(
+          `Weixin CLI exited with code ${launchExitCode}${launchOutput ? `: ${launchOutput}` : ""}`
+        );
+      }
+      return undefined;
+    });
+    await sleep(5_000);
+    return miniProgram;
+  }
+
+  private async waitForConnection(
+    wsEndpoint: string,
+    timeout: number,
+    readLaunchError: () => Error | undefined
+  ): Promise<MiniProgramLike> {
+    const deadline = Date.now() + timeout;
+    let lastError: unknown;
+
+    while (Date.now() < deadline) {
+      const launchError = readLaunchError();
+      if (launchError) {
+        throw new Error(`Failed to launch Weixin Developer Tools: ${launchError.message}`);
+      }
+
+      try {
+        return await withTimeout(this.api.connect({ wsEndpoint }), 3_000, `connect ${wsEndpoint}`);
+      } catch (error) {
+        lastError = error;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    throw new Error(
+      `Failed connecting to ${wsEndpoint}: ${
+        lastError instanceof Error ? lastError.message : String(lastError)
+      }`
+    );
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    })
+  ]);
+}
+
+function buildLaunchOptions(config: PeekitTargetConfig, timeout: number): AutomatorLaunchOptions {
+  const cliLaunch = buildCliLaunch(config.cliPath);
+
+  return {
+    projectPath: config.projectPath ?? config.rootDir ?? "",
+    ...cliLaunch,
+    ...(config.port ? { port: config.port } : {}),
+    ...(config.account ? { account: config.account } : {}),
+    ...(config.ticket ? { ticket: config.ticket } : {}),
+    ...(config.rootDir ? { cwd: config.rootDir } : {}),
+    trustProject: config.trustProject ?? true,
+    timeout
+  };
+}
+
+function buildCliLaunch(cliPath: string | undefined): Pick<AutomatorLaunchOptions, "cliPath" | "args"> {
+  if (!cliPath) {
+    return {};
+  }
+
+  if (process.platform === "win32" && isWindowsCommandScript(cliPath)) {
+    return {
+      cliPath: "cmd",
+      args: ["/d", "/s", "/c", "call", cliPath]
+    };
+  }
+
+  return { cliPath };
+}
+
+function isWindowsCommandScript(cliPath: string): boolean {
+  return /\.(bat|cmd)$/i.test(cliPath);
+}
+
+function resolveWindowsCliCommand(cliPath: string): { executable: string; argsPrefix: string[] } {
+  const cliDir = dirname(cliPath);
+  const nodePath = join(cliDir, "node.exe");
+  const cliScriptPath = join(cliDir, "cli.js");
+
+  if (existsSync(nodePath) && existsSync(cliScriptPath)) {
+    return {
+      executable: nodePath,
+      argsPrefix: [cliScriptPath]
+    };
+  }
+
+  return {
+    executable: "cmd",
+    argsPrefix: ["/d", "/s", "/c", "call", cliPath]
+  };
+}
+
+function compactLaunchOutput(output: string): string {
+  return output.replace(/\s+/g, " ").trim().slice(-1000);
 }
 
 class WeixinMiniProgramSession implements AdapterSession {
@@ -278,6 +448,7 @@ class WeixinMiniProgramSession implements AdapterSession {
   }
 
   async close(): Promise<void> {
+    await sleep(250);
     await this.miniProgram.close().catch(() => {
       this.miniProgram.disconnect();
     });
@@ -478,13 +649,33 @@ class WeixinMiniProgramSession implements AdapterSession {
   }
 
   private attachListeners(): void {
-    this.miniProgram.on("console", (payload) => {
+    const consoleListener = (payload: unknown) => {
       this.pushConsole(toConsoleEntry(payload));
-    });
+    };
+
+    if (!this.attachConsoleListener(consoleListener)) {
+      this.miniProgram.on("console", consoleListener);
+    }
 
     this.miniProgram.on("exception", (payload) => {
       this.pushError(toRuntimeError(payload));
     });
+  }
+
+  private attachConsoleListener(listener: (payload: unknown) => void): boolean {
+    const miniProgram = this.miniProgram as MiniProgramLike & {
+      send?: (method: string, params?: Record<string, unknown>) => Promise<unknown>;
+    };
+
+    if (typeof miniProgram.send !== "function") {
+      return false;
+    }
+
+    EventEmitter.prototype.on.call(miniProgram, "console", listener);
+    miniProgram.send("App.enableLog").catch((error: unknown) => {
+      this.pushError(normalizeUnknownError(error, "mp-weixin"));
+    });
+    return true;
   }
 
   private pushConsole(entry: ConsoleEntry): void {

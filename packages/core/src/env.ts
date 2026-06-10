@@ -335,7 +335,7 @@ async function readSetupManifestSource(
   }
 
   try {
-    const parsed = JSON.parse(raw) as SetupManifestShape;
+    const parsed = JSON.parse(stripByteOrderMark(raw)) as SetupManifestShape;
     const { provided, errors } = normalizeSetupManifest(parsed);
 
     return {
@@ -367,6 +367,10 @@ async function readPackageJson(root: string): Promise<PackageJsonShape | undefin
   } catch {
     return undefined;
   }
+}
+
+function stripByteOrderMark(value: string): string {
+  return value.charCodeAt(0) === 0xfeff ? value.slice(1) : value;
 }
 
 async function detectPackageManager(root: string): Promise<PackageManager | undefined> {
