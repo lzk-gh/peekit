@@ -21,3 +21,9 @@
   padding: 0 16rpx;
   border: 1px solid #cbd5e1;
 }
+
+.spacer {
+  height: 1600rpx;
+  margin-top: 40rpx;
+  color: #64748b;
+}
