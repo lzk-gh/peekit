@@ -1,5 +1,7 @@
 # Peekit
 
+English | [简体中文](README.zh-CN.md)
+
 Runtime eyes for AI agents.
 
 Peekit is an AI-first runtime inspection MCP server. It gives coding agents measured evidence from H5 and Weixin Mini Program targets: page state, element text, DOM markup or WXML, rects, computed styles, console output, errors, interactions, before/after snapshots, and diagnosis hints.

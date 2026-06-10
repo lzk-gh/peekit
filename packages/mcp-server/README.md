@@ -1,5 +1,7 @@
 # Peekit
 
+[GitHub README](https://github.com/lzk-gh/peekit#readme) includes English and Simplified Chinese documentation.
+
 Runtime eyes for AI agents.
 
 This package distributes the Peekit MCP server:
