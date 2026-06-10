@@ -133,7 +133,7 @@ describe("MCP tool contract", () => {
         mcpServers: {
           peekit: {
             command: "npx",
-            args: ["-y", "peekit", "mcp"]
+            args: ["-y", "@peekit/cli", "mcp"]
           }
         }
       }

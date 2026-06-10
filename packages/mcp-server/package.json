@@ -1,5 +1,5 @@
 {
-  "name": "peekit",
+  "name": "@peekit/cli",
   "version": "0.1.0-alpha.0",
   "description": "Peekit MCP server. Runtime eyes for AI agents.",
   "license": "MIT",

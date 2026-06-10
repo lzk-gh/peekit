@@ -7,7 +7,7 @@ Use the npm package as the MCP server distribution:
   "mcpServers": {
     "peekit": {
       "command": "npx",
-      "args": ["-y", "peekit", "mcp"]
+      "args": ["-y", "@peekit/cli", "mcp"]
     }
   }
 }

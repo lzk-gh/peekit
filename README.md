@@ -15,7 +15,7 @@ Add Peekit to an MCP client:
   "mcpServers": {
     "peekit": {
       "command": "npx",
-      "args": ["-y", "peekit", "mcp"]
+      "args": ["-y", "@peekit/cli", "mcp"]
     }
   }
 }

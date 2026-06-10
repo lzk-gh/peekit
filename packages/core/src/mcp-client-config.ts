@@ -7,7 +7,7 @@ import type {
 
 const DEFAULT_SERVER_NAME = "peekit";
 const DEFAULT_COMMAND = "npx";
-const DEFAULT_ARGS = ["-y", "peekit", "mcp"];
+const DEFAULT_ARGS = ["-y", "@peekit/cli", "mcp"];
 
 export function suggestMcpClientConfigSnippets(
   environment: EnvironmentInspection,

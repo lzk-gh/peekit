@@ -239,7 +239,7 @@ describe("AI setup assistant discovery", () => {
             mcpServers: {
               peekit: {
                 command: "npx",
-                args: ["-y", "peekit", "mcp"]
+                args: ["-y", "@peekit/cli", "mcp"]
               }
             }
           }

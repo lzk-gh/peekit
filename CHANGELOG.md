@@ -6,7 +6,7 @@ Initial alpha release focused on H5 and Weixin Mini Program runtime inspection f
 
 ### Supported
 
-- MCP server distribution through the `peekit` package.
+- MCP server distribution through the `@peekit/cli` package.
 - H5 adapter backed by Playwright.
 - Weixin Mini Program adapter backed by Weixin Developer Tools automation.
 - Runtime evidence for page state, element text, markup, rects, styles, console output, errors, interactions, snapshots, and before/after comparisons.
