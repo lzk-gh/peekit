@@ -92,8 +92,14 @@ type ElementLike = {
   scrollTo?: (x: number, y: number) => Promise<void>;
 };
 
-export function createWeixinMiniProgramAdapter(): WeixinMiniProgramAdapter {
-  return new WeixinMiniProgramAdapter();
+export type WeixinMiniProgramAdapterOptions = {
+  automator?: unknown;
+};
+
+export function createWeixinMiniProgramAdapter(
+  options: WeixinMiniProgramAdapterOptions = {}
+): WeixinMiniProgramAdapter {
+  return new WeixinMiniProgramAdapter(options);
 }
 
 export class WeixinMiniProgramAdapter implements PeekitAdapter {
@@ -102,18 +108,22 @@ export class WeixinMiniProgramAdapter implements PeekitAdapter {
   readonly name = "Weixin Mini Program Adapter";
   readonly capabilities = WEIXIN_MINI_PROGRAM_CAPABILITIES;
   readonly capabilityLevel = capabilityLevelFromCapabilities(this.capabilities);
+  private readonly api: AutomatorLike;
+
+  constructor(options: WeixinMiniProgramAdapterOptions = {}) {
+    this.api = (options.automator ?? automator) as AutomatorLike;
+  }
 
   async connect(config: PeekitTargetConfig): Promise<AdapterSession> {
     const timeout = config.timeoutMs ?? 30_000;
-    const api = automator as unknown as AutomatorLike;
 
     if (!config.wsEndpoint && !config.projectPath && !config.rootDir) {
       throw new Error("mp-weixin target needs projectPath, rootDir, or wsEndpoint");
     }
 
     const miniProgram = config.wsEndpoint
-      ? await api.connect({ wsEndpoint: config.wsEndpoint })
-      : await api.launch({
+      ? await this.api.connect({ wsEndpoint: config.wsEndpoint })
+      : await this.api.launch({
           projectPath: config.projectPath ?? config.rootDir ?? "",
           ...(config.cliPath ? { cliPath: config.cliPath } : {}),
           ...(config.port ? { port: config.port } : {}),
