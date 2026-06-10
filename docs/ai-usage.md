@@ -45,6 +45,8 @@ Setup tools use safe local discovery. Peekit reads user and project setup manife
 
 For Weixin, agents should not attempt a long connection loop unless `weixin.automation.servicePortEnabled` is `true`. If it is missing or false, report the setup blocker and ask the developer to enable Weixin Developer Tools Settings > Security > Service Port.
 
+For real Weixin Developer Tools troubleshooting, see `docs/weixin-troubleshooting.md`.
+
 `peekit_suggest_mcp_client_config` generates JSON snippets for detected MCP clients. It returns suggested content only; agents must not claim Peekit wrote editor or MCP client configuration.
 
 Element state investigation:

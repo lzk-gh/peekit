@@ -98,3 +98,4 @@ examples/
 ```
 
 See `docs/ai-usage.md` and `docs/agent-contract.md` for the agent workflow and runtime evidence contract.
+For real Weixin Developer Tools setup, see `docs/weixin-troubleshooting.md`.

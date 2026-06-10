@@ -20,7 +20,7 @@ For local development in this repository:
   "mcpServers": {
     "peekit": {
       "command": "node",
-      "args": ["d:/project/peekit/packages/mcp-server/dist/cli.js", "mcp"]
+      "args": ["<repo>/packages/mcp-server/dist/cli.js", "mcp"]
     }
   }
 }

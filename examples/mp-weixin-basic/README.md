@@ -22,3 +22,5 @@ PEEKIT_WEIXIN_SMOKE=1 pnpm --filter @peekit/adapter-mp-weixin test
 Before enabling it, create the local-only `.peekit/local-setup.json` file and set
 `weixin.automation.servicePortEnabled` to `true` after enabling Weixin Developer Tools
 Settings > Security > Service Port. The smoke test does not run by default.
+
+See `../../docs/weixin-troubleshooting.md` for Windows CLI and automation port notes.
