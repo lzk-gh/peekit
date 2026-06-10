@@ -1,5 +1,5 @@
 import { access, readdir, readFile } from "node:fs/promises";
-import { delimiter, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import type {
   EditorAppInspection,
   EnvironmentInspection,
@@ -29,6 +29,9 @@ type SetupManifestShape = {
 };
 
 type NormalizedSetupManifest = SetupManifestInspection["provided"];
+type SetupManifestSource = SetupManifestInspection["sources"][number] & {
+  provided: NormalizedSetupManifest;
+};
 
 const DEFAULT_SETUP_MANIFEST_PATH = join(".peekit", "local-setup.json");
 
@@ -165,7 +168,7 @@ export async function inspectProjectEnvironment(
       severity: "warning",
       message: "H5 dev server scripts were detected, but no Playwright Chromium, Chrome, or Edge runtime was found.",
       remediation:
-        "Install Playwright Chromium or a local Chrome/Edge browser, or provide an explicit browser/CDP target.",
+        "Install Playwright Chromium, put browserPath in ~/.peekit/local-setup.json, or provide an explicit CDP target.",
       target: "h5",
       evidence: {
         searchedPaths: toolchain.playwright.searchedPaths
@@ -212,8 +215,27 @@ export async function inspectProjectEnvironment(
       severity: "warning",
       message: "Weixin mini program project files were detected, but Weixin Developer Tools CLI was not found.",
       remediation:
-        "Install Weixin Developer Tools or set WECHAT_DEVTOOLS_CLI to the CLI executable path.",
+        "Add weixin.cliPath to ~/.peekit/local-setup.json or set WECHAT_DEVTOOLS_CLI to the CLI executable path.",
       target: "mp-weixin"
+    });
+  }
+
+  if (
+    miniProgramHints.some((hint) => hint.platform === "mp-weixin") &&
+    toolchain.miniProgramDevTools.some((tool) => tool.platform === "mp-weixin" && tool.available) &&
+    setupManifest.provided.weixin?.automation?.servicePortEnabled !== true
+  ) {
+    setupBlockers.push({
+      code: "permission_required",
+      severity: "warning",
+      message: "Weixin Developer Tools CLI is configured, but service port automation has not been confirmed.",
+      remediation:
+        "Open Weixin Developer Tools, enable Settings > Security > Service Port, then set weixin.automation.servicePortEnabled to true in the Peekit setup manifest.",
+      target: "mp-weixin",
+      evidence: {
+        manifestPath: setupManifest.path,
+        configured: setupManifest.provided.weixin?.automation?.servicePortEnabled ?? false
+      }
     });
   }
 
@@ -241,12 +263,10 @@ export async function inspectProjectEnvironment(
     security: {
       policy: "safe-local-discovery",
       inspected: [
-        "project-local Peekit setup manifest before fallback discovery",
+        "user and project Peekit setup manifests before fallback discovery",
         "project package.json, lockfiles, and known mini program config filenames",
         "PATH and selected environment variables for tool discovery",
-        "common browser and Weixin Developer Tools install locations",
-        "loopback-only dev server URLs inferred from package scripts",
-        "known MCP client config path existence"
+        "loopback-only dev server URLs inferred from package scripts"
       ],
       skipped: [
         "full disk scans",
@@ -260,7 +280,42 @@ export async function inspectProjectEnvironment(
 }
 
 async function readSetupManifest(root: string): Promise<SetupManifestInspection> {
-  const manifestPath = resolveManifestPath(root);
+  const manifestPaths = await resolveManifestPaths(root);
+  const sources = await Promise.all(
+    manifestPaths.map((source) => readSetupManifestSource(source.path, source.scope))
+  );
+  const existingSources = sources.filter((source) => source.exists);
+  const projectSource = existingSources.find((source) => source.scope === "project");
+  const userSource = existingSources.find((source) => source.scope === "user");
+  const effectiveSource = projectSource ?? userSource;
+  const errors = sources.flatMap((source) =>
+    source.errors.map((error) => `${source.scope}: ${error}`)
+  );
+  const exposedSources = sources.map(({ provided: _provided, ...source }) => source);
+
+  return {
+    path: effectiveSource?.path ?? manifestPaths.find((source) => source.scope === "project")?.path ?? manifestPaths[0]?.path ?? join(root, DEFAULT_SETUP_MANIFEST_PATH),
+    scope:
+      projectSource && userSource
+        ? "merged"
+        : projectSource
+          ? "project"
+          : userSource
+            ? "user"
+            : "none",
+    exists: existingSources.length > 0,
+    valid: sources.every((source) => !source.exists || source.valid),
+    contentRead: sources.some((source) => source.contentRead),
+    errors,
+    sources: exposedSources,
+    provided: mergeSetupManifests(existingSources.map((source) => source.provided))
+  };
+}
+
+async function readSetupManifestSource(
+  manifestPath: string,
+  scope: "user" | "project"
+): Promise<SetupManifestSource> {
   let raw: string;
 
   try {
@@ -270,6 +325,7 @@ async function readSetupManifest(root: string): Promise<SetupManifestInspection>
 
     return {
       path: manifestPath,
+      scope,
       exists: !missing,
       valid: missing,
       contentRead: false,
@@ -284,6 +340,7 @@ async function readSetupManifest(root: string): Promise<SetupManifestInspection>
 
     return {
       path: manifestPath,
+      scope,
       exists: true,
       valid: errors.length === 0,
       contentRead: true,
@@ -293,6 +350,7 @@ async function readSetupManifest(root: string): Promise<SetupManifestInspection>
   } catch (error) {
     return {
       path: manifestPath,
+      scope,
       exists: true,
       valid: false,
       contentRead: true,
@@ -444,12 +502,6 @@ async function inspectBrowsers(
     browsers.push({ name: "edge", available: true, path: pathEdge, source: "path" });
   }
 
-  for (const candidate of commonBrowserPaths()) {
-    if (candidate.path && (await pathExists(candidate.path))) {
-      browsers.push(candidate);
-    }
-  }
-
   return dedupeByPath(browsers);
 }
 
@@ -492,18 +544,6 @@ async function inspectMiniProgramDevTools(
       cliPath: pathCli,
       source: "path"
     });
-  }
-
-  for (const candidate of commonWeixinCliPaths()) {
-    if (await pathExists(candidate)) {
-      tools.push({
-        platform: "mp-weixin",
-        name: "Weixin Developer Tools CLI",
-        available: true,
-        cliPath: candidate,
-        source: "common-path"
-      });
-    }
   }
 
   return dedupeByPath(tools);
@@ -604,17 +644,7 @@ async function inspectMcpClients(
     );
   }
 
-  const candidates = knownMcpClientConfigPaths();
-
-  return Promise.all(
-    candidates.map(async ({ name, configPath }) => ({
-      name,
-      configPath,
-      exists: await pathExists(configPath),
-      contentRead: false as const,
-      source: "known-path" as const
-    }))
-  );
+  return [];
 }
 
 async function inspectEditorApps(
@@ -639,12 +669,86 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
-function resolveManifestPath(root: string): string {
+async function resolveManifestPaths(root: string): Promise<Array<{ path: string; scope: "user" | "project" }>> {
   const configured = process.env.PEEKIT_SETUP_MANIFEST;
   if (!configured) {
-    return join(root, DEFAULT_SETUP_MANIFEST_PATH);
+    return dedupeManifestPaths([
+      ...userSetupManifestPath().map((path) => ({ path, scope: "user" as const })),
+      { path: await findNearestSetupManifest(root), scope: "project" as const }
+    ]);
   }
-  return resolve(root, configured);
+  return [{ path: resolve(root, configured), scope: "project" }];
+}
+
+async function findNearestSetupManifest(root: string): Promise<string> {
+  let current = root;
+
+  while (true) {
+    const candidate = join(current, DEFAULT_SETUP_MANIFEST_PATH);
+    if (await pathExists(candidate)) {
+      return candidate;
+    }
+
+    const parent = dirname(current);
+    if (parent === current) {
+      return join(root, DEFAULT_SETUP_MANIFEST_PATH);
+    }
+    current = parent;
+  }
+}
+
+function userSetupManifestPath(): string[] {
+  const home = process.env.USERPROFILE ?? process.env.HOME;
+  return home ? [join(home, DEFAULT_SETUP_MANIFEST_PATH)] : [];
+}
+
+function dedupeManifestPaths(
+  sources: Array<{ path: string; scope: "user" | "project" }>
+): Array<{ path: string; scope: "user" | "project" }> {
+  const seen = new Set<string>();
+  const result: Array<{ path: string; scope: "user" | "project" }> = [];
+
+  for (const source of sources) {
+    const key = source.path.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(source);
+  }
+
+  return result;
+}
+
+function mergeSetupManifests(manifests: NormalizedSetupManifest[]): NormalizedSetupManifest {
+  return manifests.reduce<NormalizedSetupManifest>((merged, manifest) => ({
+    ...(merged.h5 || manifest.h5
+      ? {
+          h5: {
+            ...(merged.h5 ?? {}),
+            ...(manifest.h5 ?? {})
+          }
+        }
+      : {}),
+    ...(merged.weixin || manifest.weixin
+      ? {
+          weixin: {
+            ...(merged.weixin ?? {}),
+            ...(manifest.weixin ?? {}),
+            ...((merged.weixin?.automation || manifest.weixin?.automation)
+              ? {
+                  automation: {
+                    ...(merged.weixin?.automation ?? {}),
+                    ...(manifest.weixin?.automation ?? {})
+                  }
+                }
+              : {})
+          }
+        }
+      : {}),
+    mcpClients: [...merged.mcpClients, ...manifest.mcpClients],
+    editorApps: [...merged.editorApps, ...manifest.editorApps]
+  }), emptySetupManifest());
 }
 
 function normalizeSetupManifest(input: unknown): {
@@ -676,6 +780,18 @@ function normalizeSetupManifest(input: unknown): {
   const weixinProjectPath = weixin
     ? readOptionalString(weixin, "projectPath", errors, "weixin.projectPath")
     : undefined;
+  const weixinAutomation = weixin ? asRecord(weixin.automation) : undefined;
+  const weixinServicePortEnabled = weixinAutomation
+    ? readOptionalBoolean(
+        weixinAutomation,
+        "servicePortEnabled",
+        errors,
+        "weixin.automation.servicePortEnabled"
+      )
+    : undefined;
+  const weixinAutomationPort = weixinAutomation
+    ? readOptionalPositiveInteger(weixinAutomation, "port", errors, "weixin.automation.port")
+    : undefined;
 
   return {
     provided: {
@@ -692,7 +808,17 @@ function normalizeSetupManifest(input: unknown): {
         ? {
             weixin: {
               ...(weixinCliPath ? { cliPath: weixinCliPath } : {}),
-              ...(weixinProjectPath ? { projectPath: weixinProjectPath } : {})
+              ...(weixinProjectPath ? { projectPath: weixinProjectPath } : {}),
+              ...(weixinAutomation
+                ? {
+                    automation: {
+                      ...(weixinServicePortEnabled !== undefined
+                        ? { servicePortEnabled: weixinServicePortEnabled }
+                        : {}),
+                      ...(weixinAutomationPort !== undefined ? { port: weixinAutomationPort } : {})
+                    }
+                  }
+                : {})
             }
           }
         : {}),
@@ -786,6 +912,46 @@ function readOptionalString(
   return value;
 }
 
+function readOptionalBoolean(
+  record: Record<string, unknown>,
+  key: string,
+  errors: string[],
+  path: string
+): boolean | undefined {
+  const value = record[key];
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "boolean") {
+    errors.push(`${path} must be a boolean`);
+    return undefined;
+  }
+
+  return value;
+}
+
+function readOptionalPositiveInteger(
+  record: Record<string, unknown>,
+  key: string,
+  errors: string[],
+  path: string
+): number | undefined {
+  const value = record[key];
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Number.isInteger(value) || typeof value !== "number" || value <= 0) {
+    errors.push(`${path} must be a positive integer`);
+    return undefined;
+  }
+
+  return value;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -858,97 +1024,6 @@ function inferBrowserName(path: string): "chromium" | "chrome" | "edge" {
     return "chrome";
   }
   return "chromium";
-}
-
-function commonBrowserPaths(): ToolchainInspection["browsers"] {
-  const paths: ToolchainInspection["browsers"] = [];
-  const localAppData = process.env.LOCALAPPDATA ?? "";
-  const home = process.env.HOME ?? "";
-
-  if (process.platform === "win32") {
-    paths.push(
-      {
-        name: "chrome",
-        available: true,
-        path: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-        source: "common-path"
-      },
-      {
-        name: "chrome",
-        available: true,
-        path: "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-        source: "common-path"
-      },
-      {
-        name: "chrome",
-        available: true,
-        path: join(localAppData, "Google", "Chrome", "Application", "chrome.exe"),
-        source: "common-path"
-      },
-      {
-        name: "edge",
-        available: true,
-        path: "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
-        source: "common-path"
-      }
-    );
-  } else if (process.platform === "darwin") {
-    paths.push(
-      {
-        name: "chrome",
-        available: true,
-        path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        source: "common-path"
-      },
-      {
-        name: "edge",
-        available: true,
-        path: "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-        source: "common-path"
-      }
-    );
-  } else {
-    paths.push(
-      { name: "chrome", available: true, path: "/usr/bin/google-chrome", source: "common-path" },
-      { name: "chrome", available: true, path: "/usr/bin/chromium", source: "common-path" },
-      { name: "chrome", available: true, path: join(home, ".local", "bin", "chromium"), source: "common-path" }
-    );
-  }
-
-  return paths;
-}
-
-function commonWeixinCliPaths(): string[] {
-  if (process.platform === "win32") {
-    return [
-      "C:\\Program Files\\Tencent\\\u5fae\u4fe1web\u5f00\u53d1\u8005\u5de5\u5177\\cli.bat",
-      "C:\\Program Files (x86)\\Tencent\\\u5fae\u4fe1web\u5f00\u53d1\u8005\u5de5\u5177\\cli.bat",
-      "C:\\Program Files\\Tencent\\\u5fae\u4fe1\u5f00\u53d1\u8005\u5de5\u5177\\cli.bat",
-      "C:\\Program Files (x86)\\Tencent\\\u5fae\u4fe1\u5f00\u53d1\u8005\u5de5\u5177\\cli.bat"
-    ];
-  }
-
-  if (process.platform === "darwin") {
-    return [
-      "/Applications/wechatwebdevtools.app/Contents/MacOS/cli",
-      "/Applications/\u5fae\u4fe1\u5f00\u53d1\u8005\u5de5\u5177.app/Contents/MacOS/cli"
-    ];
-  }
-
-  return [];
-}
-
-function knownMcpClientConfigPaths(): Array<{ name: string; configPath: string }> {
-  const home = process.env.USERPROFILE ?? process.env.HOME ?? "";
-  const appData = process.env.APPDATA ?? "";
-
-  return [
-    { name: "Claude Desktop", configPath: join(appData, "Claude", "claude_desktop_config.json") },
-    { name: "Cursor", configPath: join(home, ".cursor", "mcp.json") },
-    { name: "Cursor", configPath: join(appData, "Cursor", "User", "mcp.json") },
-    { name: "VS Code", configPath: join(appData, "Code", "User", "mcp.json") },
-    { name: "Windsurf", configPath: join(home, ".codeium", "windsurf", "mcp_config.json") }
-  ].filter((candidate) => candidate.configPath.trim().length > 0);
 }
 
 function dedupeByPath<T extends { path?: string; cliPath?: string }>(items: T[]): T[] {

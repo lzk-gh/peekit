@@ -35,6 +35,8 @@ Compare the measured spacing, color, and visibility of this page between H5 and 
 After the fix, verify with Peekit using before/after runtime evidence.
 ```
 
+For local runtime paths, use `~/.peekit/local-setup.json` for machine-wide paths and `<repo>/.peekit/local-setup.json` for project overrides. Weixin targets require `weixin.automation.servicePortEnabled: true` after the Developer Tools service port is enabled in security settings.
+
 ## Tools
 
 Peekit exposes these MCP tools:

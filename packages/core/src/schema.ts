@@ -129,6 +129,11 @@ export const PeekitTargetConfigSchema = z.object({
   account: z.string().optional(),
   ticket: z.string().optional(),
   trustProject: z.boolean().optional(),
+  automation: z
+    .object({
+      servicePortEnabled: z.boolean().optional()
+    })
+    .optional(),
   browser: z.enum(["chromium", "firefox", "webkit"]).optional(),
   browserPath: z.string().optional(),
   headless: z.boolean().optional(),

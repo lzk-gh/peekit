@@ -30,6 +30,12 @@ const targetConfigSchema: JsonSchema = {
     account: { type: "string" },
     ticket: { type: "string" },
     trustProject: { type: "boolean" },
+    automation: {
+      type: "object",
+      properties: {
+        servicePortEnabled: { type: "boolean" }
+      }
+    },
     browser: { type: "string", enum: ["chromium", "firefox", "webkit"] },
     browserPath: { type: "string" },
     headless: { type: "boolean" },

@@ -34,9 +34,16 @@ peekit_validate_target
 peekit_connect_target
 ```
 
-For the fastest and clearest setup, copy `.peekit/local-setup.example.json` to `.peekit/local-setup.json` and fill in local editor, browser, Weixin DevTools, and MCP client config paths. The local file is ignored by git.
+For the fastest and clearest setup, fill in one of these local manifests:
 
-Setup tools use safe local discovery. Peekit reads the local setup manifest first, then falls back to the project directory, PATH, selected environment variables, common local tool locations, loopback ports, and MCP client config path existence only when needed. It does not run full disk scans, read secrets, read editor config contents, scan public networks, or write editor configuration.
+- User-level machine paths: `~/.peekit/local-setup.json`
+- Project-level overrides: `<repo>/.peekit/local-setup.json`
+
+Put stable machine paths such as Weixin DevTools CLI, browser path, and MCP client paths in the user-level file. Put project-specific values such as H5 URL or mini program projectPath in the project file.
+
+Setup tools use safe local discovery. Peekit reads user and project setup manifests first, then falls back only to the project directory, PATH, selected environment variables, and loopback ports. It does not run full disk scans, guess common install paths, read secrets, read editor config contents, scan public networks, or write editor configuration.
+
+For Weixin, agents should not attempt a long connection loop unless `weixin.automation.servicePortEnabled` is `true`. If it is missing or false, report the setup blocker and ask the developer to enable Weixin Developer Tools Settings > Security > Service Port.
 
 `peekit_suggest_mcp_client_config` generates JSON snippets for detected MCP clients. It returns suggested content only; agents must not claim Peekit wrote editor or MCP client configuration.
 

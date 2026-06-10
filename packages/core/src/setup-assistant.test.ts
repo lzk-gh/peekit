@@ -15,7 +15,7 @@ afterEach(async () => {
 });
 
 describe("AI setup assistant discovery", () => {
-  it("uses safe local discovery for toolchain, loopback ports, and MCP client paths", async () => {
+  it("uses safe local discovery without default install path guesses", async () => {
     const port = await getFreePort();
     const server = createServer((_request, response) => {
       response.writeHead(200, { "Content-Type": "text/plain" });
@@ -73,16 +73,11 @@ describe("AI setup assistant discovery", () => {
           })
         ])
       );
-      expect(environment.mcpClients).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            name: "Claude Desktop",
-            configPath: claudeConfig,
-            exists: true,
-            contentRead: false
-          })
-        ])
+      expect(environment.mcpClients).toEqual([]);
+      expect(environment.toolchain.browsers.every((item) => item.source !== "common-path")).toBe(
+        true
       );
+      expect(environment.toolchain.miniProgramDevTools).toEqual([]);
       expect(JSON.stringify(environment)).not.toContain("DO_NOT_READ");
       expect(environment.security.policy).toBe("safe-local-discovery");
       expect(environment.security.skipped).toEqual(
@@ -141,7 +136,11 @@ describe("AI setup assistant discovery", () => {
           },
           weixin: {
             cliPath,
-            projectPath: root
+            projectPath: root,
+            automation: {
+              servicePortEnabled: true,
+              port: 9420
+            }
           },
           mcpClients: [
             {
@@ -215,6 +214,10 @@ describe("AI setup assistant discovery", () => {
         type: "mp-weixin",
         projectPath: root,
         cliPath,
+        port: 9420,
+        automation: {
+          servicePortEnabled: true
+        },
         metadata: {
           source: "manifest",
           confidence: "high",
@@ -248,6 +251,118 @@ describe("AI setup assistant discovery", () => {
     } finally {
       await close(server);
     }
+  });
+
+  it("finds a local setup manifest from parent project directories", async () => {
+    const root = await tempDir();
+    const child = join(root, "apps", "mini");
+    const cliPath = join(root, "wechat-cli.bat");
+
+    await mkdir(join(root, ".peekit"), { recursive: true });
+    await mkdir(child, { recursive: true });
+    await writeFile(cliPath, "", "utf8");
+    await writeFile(join(child, "project.config.json"), "{}", "utf8");
+    await writeFile(
+      join(root, ".peekit", "local-setup.json"),
+      JSON.stringify({
+        version: 1,
+        weixin: {
+          cliPath,
+          projectPath: child,
+          automation: {
+            servicePortEnabled: true
+          }
+        }
+      }),
+      "utf8"
+    );
+
+    const environment = await inspectProjectEnvironment(child);
+    const suggestion = suggestTargetConfigs(environment, "mp-weixin")[0];
+
+    expect(environment.setupManifest.path).toBe(join(root, ".peekit", "local-setup.json"));
+    expect(environment.toolchain.miniProgramDevTools[0]).toMatchObject({
+      cliPath,
+      available: true,
+      source: "manifest"
+    });
+    expect(suggestion).toMatchObject({
+      type: "mp-weixin",
+      projectPath: child,
+      cliPath,
+      automation: {
+        servicePortEnabled: true
+      },
+      metadata: {
+        source: "manifest",
+        requiresUserAction: false
+      }
+    });
+  });
+
+  it("merges user setup manifest with project setup manifest", async () => {
+    const root = await tempDir();
+    const home = await tempDir();
+    const cliPath = join(home, "wechat-cli.bat");
+    const projectPath = join(root, "mini");
+
+    await mkdir(join(home, ".peekit"), { recursive: true });
+    await mkdir(join(root, ".peekit"), { recursive: true });
+    await mkdir(projectPath, { recursive: true });
+    await writeFile(cliPath, "", "utf8");
+    await writeFile(join(projectPath, "project.config.json"), "{}", "utf8");
+    await writeFile(
+      join(home, ".peekit", "local-setup.json"),
+      JSON.stringify({
+        version: 1,
+        weixin: {
+          cliPath,
+          automation: {
+            servicePortEnabled: true
+          }
+        }
+      }),
+      "utf8"
+    );
+    await writeFile(
+      join(root, ".peekit", "local-setup.json"),
+      JSON.stringify({
+        version: 1,
+        weixin: {
+          projectPath
+        }
+      }),
+      "utf8"
+    );
+
+    const environment = await withEnv({ USERPROFILE: home, HOME: home }, () =>
+      inspectProjectEnvironment(projectPath)
+    );
+    const suggestion = suggestTargetConfigs(environment, "mp-weixin")[0];
+
+    expect(environment.setupManifest).toMatchObject({
+      scope: "merged",
+      exists: true,
+      valid: true
+    });
+    expect(environment.setupManifest.sources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scope: "user", exists: true }),
+        expect.objectContaining({ scope: "project", exists: true })
+      ])
+    );
+    expect(suggestion).toMatchObject({
+      type: "mp-weixin",
+      projectPath,
+      cliPath,
+      automation: {
+        servicePortEnabled: true
+      },
+      metadata: {
+        source: "manifest",
+        requiresUserAction: false
+      }
+    });
   });
 
   it("reports unreachable inferred dev server ports as setup blockers", async () => {
@@ -318,7 +433,7 @@ describe("AI setup assistant discovery", () => {
     );
   });
 
-  it("suggests target configs with confidence metadata and discovered Weixin CLI", async () => {
+  it("requires Weixin service port confirmation when only CLI is discovered", async () => {
     const root = await tempDir();
     const cliPath = join(root, "wechat-cli.bat");
     await writeFile(cliPath, "", "utf8");
@@ -336,9 +451,17 @@ describe("AI setup assistant discovery", () => {
       metadata: {
         source: "project-config",
         confidence: "high",
-        requiresUserAction: false
+        requiresUserAction: true
       }
     });
+    expect(environment.setupBlockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "permission_required",
+          target: "mp-weixin"
+        })
+      ])
+    );
   });
 
   it("validates setup blockers without probing non-loopback addresses", async () => {
@@ -390,6 +513,34 @@ describe("AI setup assistant discovery", () => {
     ).resolves.toMatchObject({
       valid: false,
       setupBlockers: [expect.objectContaining({ code: "missing_tool" })]
+    });
+
+    const cliPath = join(await tempDir(), "wechat-cli.bat");
+    await writeFile(cliPath, "", "utf8");
+
+    await expect(
+      validateTargetConfig({
+        type: "mp-weixin",
+        projectPath: "demo",
+        cliPath
+      })
+    ).resolves.toMatchObject({
+      valid: false,
+      setupBlockers: [expect.objectContaining({ code: "permission_required" })]
+    });
+
+    await expect(
+      validateTargetConfig({
+        type: "mp-weixin",
+        projectPath: "demo",
+        cliPath,
+        automation: {
+          servicePortEnabled: true
+        }
+      })
+    ).resolves.toMatchObject({
+      valid: true,
+      setupBlockers: []
     });
   });
 });

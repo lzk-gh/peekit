@@ -74,6 +74,8 @@ export function suggestTargetConfigs(
     (tool) => tool.platform === "mp-weixin" && tool.available
   )?.cliPath;
   const manifestWeixin = environment.setupManifest.provided.weixin;
+  const weixinAutomationConfirmed =
+    manifestWeixin?.automation?.servicePortEnabled === true;
 
   if ((!preferredKind || preferredKind === "mp-weixin") && manifestWeixin) {
     suggestions.push({
@@ -83,12 +85,21 @@ export function suggestTargetConfigs(
       rootDir: environment.cwd,
       ...(manifestWeixin.projectPath ? { projectPath: manifestWeixin.projectPath } : {}),
       ...(manifestWeixin.cliPath ? { cliPath: manifestWeixin.cliPath } : {}),
+      ...(manifestWeixin.automation?.port ? { port: manifestWeixin.automation.port } : {}),
+      ...(manifestWeixin.automation
+        ? {
+            automation: {
+              servicePortEnabled: manifestWeixin.automation.servicePortEnabled
+            }
+          }
+        : {}),
       metadata: {
         source: "manifest",
         confidence: manifestWeixin.projectPath && manifestWeixin.cliPath ? "high" : "medium",
         requiresUserAction:
           !manifestWeixin.projectPath ||
           !manifestWeixin.cliPath ||
+          !weixinAutomationConfirmed ||
           environment.toolchain.miniProgramDevTools.some(
             (tool) => tool.source === "manifest" && !tool.available
           )
@@ -110,11 +121,15 @@ export function suggestTargetConfigs(
       rootDir: environment.cwd,
       ...(hint.platform === "mp-weixin" ? { projectPath: environment.cwd } : {}),
       ...(hint.platform === "mp-weixin" && weixinCli ? { cliPath: weixinCli } : {}),
+      ...(hint.platform === "mp-weixin" && weixinAutomationConfirmed
+        ? { automation: { servicePortEnabled: true } }
+        : {}),
       metadata: {
         configFile: hint.file,
         source: "project-config",
         confidence: hint.platform === "mp-weixin" && weixinCli ? "high" : "medium",
-        requiresUserAction: hint.platform === "mp-weixin" && !weixinCli
+        requiresUserAction:
+          hint.platform === "mp-weixin" && (!weixinCli || !weixinAutomationConfirmed)
       }
     });
   }
@@ -159,6 +174,20 @@ export async function validateTargetConfig(
           message: `Weixin Developer Tools CLI does not exist: ${target.cliPath}`,
           remediation: "Pass a valid cliPath or set WECHAT_DEVTOOLS_CLI to the CLI executable.",
           target: "mp-weixin"
+        });
+      } else if (target.automation?.servicePortEnabled !== true) {
+        blockers.push("Weixin Developer Tools service port automation has not been confirmed");
+        setupBlockers.push({
+          code: "permission_required",
+          severity: "error",
+          message: "Weixin Developer Tools service port automation has not been confirmed.",
+          remediation:
+            "Open Weixin Developer Tools, enable Settings > Security > Service Port, then set automation.servicePortEnabled to true in the target config or Peekit setup manifest.",
+          target: "mp-weixin",
+          evidence: {
+            cliPath: target.cliPath,
+            projectPath: target.projectPath ?? target.rootDir
+          }
         });
       }
     }

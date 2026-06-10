@@ -113,6 +113,9 @@ export type PeekitTargetConfig = {
   account?: string;
   ticket?: string;
   trustProject?: boolean;
+  automation?: {
+    servicePortEnabled?: boolean;
+  };
   browser?: "chromium" | "firefox" | "webkit";
   browserPath?: string;
   headless?: boolean;
@@ -263,14 +266,14 @@ export type ToolchainInspection = {
     name: "chromium" | "chrome" | "edge";
     available: boolean;
     path?: string;
-    source: "manifest" | "env" | "path" | "common-path" | "playwright-cache";
+    source: "manifest" | "env" | "path" | "playwright-cache";
   }>;
   miniProgramDevTools: Array<{
     platform: TargetKind;
     name: string;
     available: boolean;
     cliPath?: string;
-    source: "manifest" | "env" | "path" | "common-path";
+    source: "manifest" | "env" | "path";
   }>;
 };
 
@@ -324,10 +327,19 @@ export type EditorAppInspection = {
 
 export type SetupManifestInspection = {
   path: string;
+  scope: "none" | "user" | "project" | "merged";
   exists: boolean;
   valid: boolean;
   contentRead: boolean;
   errors: string[];
+  sources: Array<{
+    path: string;
+    scope: "user" | "project";
+    exists: boolean;
+    valid: boolean;
+    contentRead: boolean;
+    errors: string[];
+  }>;
   provided: {
     h5?: {
       url?: string;
@@ -337,6 +349,10 @@ export type SetupManifestInspection = {
     weixin?: {
       cliPath?: string;
       projectPath?: string;
+      automation?: {
+        servicePortEnabled?: boolean;
+        port?: number;
+      };
     };
     mcpClients: Array<{
       name: string;

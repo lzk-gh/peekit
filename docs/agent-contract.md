@@ -78,10 +78,12 @@ Agents should treat unsupported fields as evidence, not as failure to be hidden.
 {
   setupManifest: {
     path: string
+    scope: "none" | "user" | "project" | "merged"
     exists: boolean
     valid: boolean
     contentRead: boolean
     errors: string[]
+    sources: Array<{ path: string; scope: "user" | "project"; exists: boolean; valid: boolean; contentRead: boolean }>
   }
   toolchain: {
     system: { platform: string; arch: string; shell?: string }
@@ -99,7 +101,7 @@ Agents should treat unsupported fields as evidence, not as failure to be hidden.
 }
 ```
 
-Agents should read `.peekit/local-setup.json` evidence first when it exists. If the manifest is missing or incomplete, agents should use fallback discovery evidence before asking developers for editor paths, browser paths, or mini program DevTools paths. If a blocker remains, report the `message` and `remediation`.
+Agents should read `~/.peekit/local-setup.json` and `<repo>/.peekit/local-setup.json` evidence first. Project manifests override user manifests. If Weixin `servicePortEnabled` is not true, report the blocker instead of repeatedly trying to connect. If a blocker remains, report the `message` and `remediation`.
 
 ## MCP Client Config Snippets
 

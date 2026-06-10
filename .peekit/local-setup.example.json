@@ -2,11 +2,15 @@
   "version": 1,
   "h5": {
     "url": "http://localhost:5173",
-    "browserPath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    "browserPath": "C:\\path\\to\\chrome.exe"
   },
   "weixin": {
-    "cliPath": "C:\\Program Files\\Tencent\\\u5fae\u4fe1\u5f00\u53d1\u8005\u5de5\u5177\\cli.bat",
-    "projectPath": "D:\\work\\miniapp"
+    "cliPath": "C:\\path\\to\\\u5fae\u4fe1\u5f00\u53d1\u8005\u5de5\u5177\\cli.bat",
+    "projectPath": "D:\\work\\miniapp",
+    "automation": {
+      "servicePortEnabled": false,
+      "port": 9420
+    }
   },
   "mcpClients": [
     {
