@@ -314,7 +314,7 @@ export const PEEKIT_TOOLS: PeekitToolDefinition[] = [
   },
   {
     name: "peekit_cross_target_compare",
-    description: "Compare runtime evidence across two targets or snapshots.",
+    description: "Compare runtime evidence across two targets with page, element, console, error, summary, and next-probe output.",
     inputSchema: {
       type: "object",
       properties: {

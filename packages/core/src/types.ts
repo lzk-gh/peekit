@@ -204,6 +204,44 @@ export type SnapshotDiff = {
   summary: string[];
 };
 
+export type CrossTargetElementStatus = "matched" | "left-only" | "right-only";
+
+export type CrossTargetElementComparison = {
+  key: string;
+  status: CrossTargetElementStatus;
+  leftSelector?: string;
+  rightSelector?: string;
+  left?: ElementEvidence;
+  right?: ElementEvidence;
+  differences: FieldChange[];
+  riskFields: string[];
+  severity: "info" | "warning" | "error";
+  summary: string[];
+};
+
+export type CrossTargetComparison = {
+  leftTarget: string;
+  rightTarget: string;
+  leftTargetType?: TargetKind;
+  rightTargetType?: TargetKind;
+  leftSnapshotId?: string;
+  rightSnapshotId?: string;
+  changed: boolean;
+  diff: SnapshotDiff;
+  pageChanges: FieldChange[];
+  elementComparisons: CrossTargetElementComparison[];
+  consoleChanges: {
+    leftOnly: ConsoleEntry[];
+    rightOnly: ConsoleEntry[];
+  };
+  errorChanges: {
+    leftOnly: RuntimeError[];
+    rightOnly: RuntimeError[];
+  };
+  summary: string[];
+  nextProbes: string[];
+};
+
 export type Diagnosis = {
   problem?: string;
   evidence: string[];

@@ -53,6 +53,38 @@ type RuntimeEvidence = {
 
 Snapshots are stored in memory for the lifetime of one MCP server process. Agents can compare snapshots by id through `peekit_compare_snapshots`.
 
+## Cross-Target Compare
+
+`peekit_cross_target_compare` compares two snapshots from different runtimes, such as H5 and Weixin Mini Program. It keeps the normal `diff` field and adds cross-target fields that are easier for agents to reason over:
+
+```ts
+{
+  leftTarget: string
+  rightTarget: string
+  leftTargetType?: string
+  rightTargetType?: string
+  changed: boolean
+  diff: SnapshotDiff
+  pageChanges: FieldChange[]
+  elementComparisons: Array<{
+    key: string
+    status: "matched" | "left-only" | "right-only"
+    leftSelector?: string
+    rightSelector?: string
+    differences: FieldChange[]
+    riskFields: string[]
+    severity: "info" | "warning" | "error"
+    summary: string[]
+  }>
+  consoleChanges: { leftOnly: ConsoleEntry[]; rightOnly: ConsoleEntry[] }
+  errorChanges: { leftOnly: RuntimeError[]; rightOnly: RuntimeError[] }
+  summary: string[]
+  nextProbes: string[]
+}
+```
+
+Elements are matched first by `data-testid`, then by `id`, then by selector. Agents should prefer the `summary`, `riskFields`, and `nextProbes` fields when explaining cross-platform UI differences.
+
 ## Unsupported Contract
 
 Unsupported capability must be explicit:

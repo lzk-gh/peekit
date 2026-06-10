@@ -10,6 +10,7 @@ import {
   PeekitTargetConfigSchema,
   RuntimeEvidenceSchema,
   RuntimeSnapshotSchema,
+  compareCrossTargetSnapshots,
   diagnoseIssue,
   diffSnapshots,
   explainSetupBlocker,
@@ -349,11 +350,7 @@ export class PeekitMcpRuntime {
   private crossTargetCompare(args: unknown) {
     const left = this.resolveSnapshot(args, "left");
     const right = this.resolveSnapshot(args, "right");
-    return {
-      leftTarget: left.target,
-      rightTarget: right.target,
-      diff: diffSnapshots(left, right)
-    };
+    return compareCrossTargetSnapshots(left, right);
   }
 
   private resolveSnapshot(args: unknown, key: "before" | "after" | "left" | "right"): RuntimeSnapshot {

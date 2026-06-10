@@ -276,17 +276,67 @@ describe("MCP tool contract", () => {
     expect(replay.replayed).toBe(true);
     expect(replay.results[0]?.interaction?.action).toBe("click");
 
+    const submitElement = after.elements[0];
+    if (!submitElement) {
+      throw new Error("contract snapshot is missing #submit");
+    }
+    const weixinSnapshot: RuntimeSnapshot = {
+      ...after,
+      snapshotId: "weixin-after",
+      target: "mp-weixin:contract",
+      targetType: "mp-weixin",
+      page: {
+        route: "pages/index/index",
+        viewport: { width: 390, height: 844 },
+        scroll: { x: 0, y: 0 }
+      },
+      elements: [
+        {
+          ...submitElement,
+          selector: ".submit",
+          text: "Clicked 1",
+          className: "button primary",
+          attributes: {
+            "data-testid": "submit-button"
+          },
+          rect: {
+            left: 20,
+            top: 28,
+            width: 132,
+            height: 44
+          }
+        }
+      ],
+      console: [{ type: "info", text: "weixin fixture ready" }]
+    };
     const crossTarget = await call<{
       leftTarget: string;
       rightTarget: string;
+      changed: boolean;
       diff: { changed: boolean };
+      elementComparisons: Array<{ key: string; riskFields: string[] }>;
+      summary: string[];
+      nextProbes: string[];
     }>("peekit_cross_target_compare", {
       leftSnapshotId: "before",
-      rightSnapshotId: "after"
+      right: weixinSnapshot
     });
     expect(crossTarget.leftTarget).toBe("h5:contract");
-    expect(crossTarget.rightTarget).toBe("h5:contract");
+    expect(crossTarget.rightTarget).toBe("mp-weixin:contract");
+    expect(crossTarget.changed).toBe(true);
     expect(crossTarget.diff.changed).toBe(true);
+    expect(crossTarget.elementComparisons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "data-testid:submit-button",
+          riskFields: expect.arrayContaining(["content", "class", "layout"])
+        })
+      ])
+    );
+    expect(crossTarget.summary).toEqual(
+      expect.arrayContaining([expect.stringContaining("cross-target compare")])
+    );
+    expect(crossTarget.nextProbes.length).toBeGreaterThan(0);
 
     expect([...calledTools]).toEqual(EXPECTED_TOOL_NAMES);
     await runtime.close();
