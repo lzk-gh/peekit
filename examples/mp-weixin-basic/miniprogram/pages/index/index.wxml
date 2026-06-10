@@ -1,3 +1,19 @@
 <view class="page">
-  <button class="submit">Submit</button>
+  <button
+    id="submit"
+    class="submit {{loading ? 'loading' : ''}}"
+    data-testid="submit-button"
+    loading="{{loading}}"
+    bindtap="onSubmit"
+  >
+    {{loading ? 'Loading' : 'Submit'}}
+  </button>
+  <view id="status" class="status" data-testid="status">{{status}}</view>
+  <input
+    id="name"
+    class="name"
+    data-testid="name-input"
+    value="{{name}}"
+    bindinput="onNameInput"
+  />
 </view>

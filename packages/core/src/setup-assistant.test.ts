@@ -433,6 +433,45 @@ describe("AI setup assistant discovery", () => {
     );
   });
 
+  it("accepts UTF-8 BOM in local setup manifests", async () => {
+    const root = await tempDir();
+    const cliPath = join(root, "wechat-cli.bat");
+    const projectPath = join(root, "miniapp");
+    await mkdir(join(root, ".peekit"), { recursive: true });
+    await mkdir(projectPath, { recursive: true });
+    await writeFile(cliPath, "", "utf8");
+    await writeFile(
+      join(root, ".peekit", "local-setup.json"),
+      `\uFEFF${JSON.stringify({
+        weixin: {
+          cliPath,
+          projectPath,
+          automation: {
+            servicePortEnabled: true
+          }
+        }
+      })}`,
+      "utf8"
+    );
+
+    const environment = await inspectProjectEnvironment(root);
+
+    expect(environment.setupManifest).toMatchObject({
+      exists: true,
+      valid: true,
+      contentRead: true,
+      provided: {
+        weixin: {
+          cliPath,
+          projectPath,
+          automation: {
+            servicePortEnabled: true
+          }
+        }
+      }
+    });
+  });
+
   it("requires Weixin service port confirmation when only CLI is discovered", async () => {
     const root = await tempDir();
     const cliPath = join(root, "wechat-cli.bat");

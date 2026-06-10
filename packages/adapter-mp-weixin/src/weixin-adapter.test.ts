@@ -1,9 +1,12 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import type { AdapterSession, PeekitTargetConfig, RuntimeEvidence } from "@peekit/core";
 import { createWeixinMiniProgramAdapter } from "./index.js";
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 describe("WeixinMiniProgramAdapter fixture", () => {
   let session: AdapterSession | undefined;
@@ -43,6 +46,21 @@ describe("WeixinMiniProgramAdapter fixture", () => {
     const opened = await session.openPage("/pages/detail/index?from=test");
     expect(opened.page.route).toBe("pages/detail/index");
     expect(opened.page.query).toEqual({ from: "test" });
+  });
+
+  it("wraps Windows command script CLI paths for automator launch", async () => {
+    const automator = new FakeAutomator();
+    const cliPath = "C:\\tools\\weixin-devtools\\cli.bat";
+    session = await createFixtureSession(automator, { cliPath });
+
+    if (process.platform === "win32") {
+      expect(automator.launches[0]).toMatchObject({
+        cliPath: "cmd",
+        args: ["/d", "/s", "/c", "call", cliPath]
+      });
+    } else {
+      expect(automator.launches[0]).toMatchObject({ cliPath });
+    }
   });
 
   it("queries one element with WXML, layout, style, and state evidence", async () => {
@@ -213,21 +231,25 @@ describe("WeixinMiniProgramAdapter fixture", () => {
 describe("WeixinMiniProgramAdapter real smoke", () => {
   const runSmoke = process.env.PEEKIT_WEIXIN_SMOKE === "1" ? it : it.skip;
 
-  runSmoke("connects only when local setup explicitly allows automation", async () => {
-    const config = await loadSmokeConfig();
-    const smokeSession = await createWeixinMiniProgramAdapter().connect(config);
+  runSmoke(
+    "connects only when local setup explicitly allows automation",
+    async () => {
+      const config = await loadSmokeConfig();
+      const smokeSession = await createWeixinMiniProgramAdapter().connect(config);
 
-    try {
-      const page = await smokeSession.getCurrentPage();
-      expect(page.target).toBe("mp-weixin:smoke");
-      expect(page.targetType).toBe("mp-weixin");
-      expect(page.page).toEqual(expect.any(Object));
-      expect(page.console).toEqual(expect.any(Array));
-      expect(page.errors).toEqual(expect.any(Array));
-    } finally {
-      await smokeSession.close();
-    }
-  });
+      try {
+        const page = await withTimeout(smokeSession.getCurrentPage(), 10_000, "getCurrentPage");
+        expect(page.target).toBe("mp-weixin:smoke");
+        expect(page.targetType).toBe("mp-weixin");
+        expect(page.page).toEqual(expect.any(Object));
+        expect(page.console).toEqual(expect.any(Array));
+        expect(page.errors).toEqual(expect.any(Array));
+      } finally {
+        await smokeSession.close();
+      }
+    },
+    70_000
+  );
 });
 
 async function createFixtureSession(
@@ -256,7 +278,7 @@ function expectEvidenceShape(evidence: RuntimeEvidence): void {
 }
 
 async function loadSmokeConfig(): Promise<PeekitTargetConfig> {
-  const manifestPath = resolve(process.cwd(), ".peekit", "local-setup.json");
+  const manifestPath = resolve(repoRoot, ".peekit", "local-setup.json");
 
   if (!existsSync(manifestPath)) {
     throw new Error(
@@ -265,7 +287,7 @@ async function loadSmokeConfig(): Promise<PeekitTargetConfig> {
     );
   }
 
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as unknown;
+  const manifest = JSON.parse(stripByteOrderMark(await readFile(manifestPath, "utf8"))) as unknown;
   if (!isRecord(manifest) || !isRecord(manifest.weixin)) {
     throw new Error("PEEKIT_WEIXIN_SMOKE needs weixin settings in .peekit/local-setup.json.");
   }
@@ -295,7 +317,7 @@ async function loadSmokeConfig(): Promise<PeekitTargetConfig> {
     projectPath: manifest.weixin.projectPath,
     ...(typeof automation.port === "number" ? { port: automation.port } : {}),
     automation: { servicePortEnabled: true },
-    timeoutMs: 15_000
+    timeoutMs: 45_000
   };
 }
 
@@ -617,4 +639,17 @@ class FakeElement {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stripByteOrderMark(value: string): string {
+  return value.charCodeAt(0) === 0xfeff ? value.slice(1) : value;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    })
+  ]);
 }

@@ -1,0 +1,23 @@
+.page {
+  padding: 24rpx;
+}
+
+.submit {
+  width: 220rpx;
+  margin: 24rpx 0;
+  color: #ffffff;
+  background: #1264d8;
+}
+
+.status {
+  margin: 16rpx 0;
+  color: #334155;
+}
+
+.name {
+  width: 480rpx;
+  height: 72rpx;
+  margin-top: 24rpx;
+  padding: 0 16rpx;
+  border: 1px solid #cbd5e1;
+}
