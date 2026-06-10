@@ -1,11 +1,20 @@
 {
   "name": "peekit",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.0",
   "description": "Peekit MCP server. Runtime eyes for AI agents.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lzk-gh/peekit.git",
+    "directory": "packages/mcp-server"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "README.md"],
+  "files": ["dist", "!dist/.tsbuildinfo", "README.md"],
   "bin": {
     "peekit": "./dist/cli.js"
   },
@@ -23,9 +32,6 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
     "@peekit/adapter-h5": "workspace:*",
-    "@peekit/adapter-mp-alipay": "workspace:*",
-    "@peekit/adapter-mp-bytedance": "workspace:*",
-    "@peekit/adapter-mp-qq": "workspace:*",
     "@peekit/adapter-mp-weixin": "workspace:*",
     "@peekit/core": "workspace:*",
     "@peekit/reporter": "workspace:*"

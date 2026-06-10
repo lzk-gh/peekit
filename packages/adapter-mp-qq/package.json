@@ -1,6 +1,7 @@
 {
   "name": "@peekit/adapter-mp-qq",
   "version": "0.1.0",
+  "private": true,
   "description": "QQ Mini Program adapter entry for Peekit.",
   "type": "module",
   "main": "./dist/index.js",

@@ -112,15 +112,6 @@ importers:
       '@peekit/adapter-h5':
         specifier: workspace:*
         version: link:../adapter-h5
-      '@peekit/adapter-mp-alipay':
-        specifier: workspace:*
-        version: link:../adapter-mp-alipay
-      '@peekit/adapter-mp-bytedance':
-        specifier: workspace:*
-        version: link:../adapter-mp-bytedance
-      '@peekit/adapter-mp-qq':
-        specifier: workspace:*
-        version: link:../adapter-mp-qq
       '@peekit/adapter-mp-weixin':
         specifier: workspace:*
         version: link:../adapter-mp-weixin

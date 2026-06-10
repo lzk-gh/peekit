@@ -1,6 +1,7 @@
 {
   "name": "@peekit/adapter-mp-alipay",
   "version": "0.1.0",
+  "private": true,
   "description": "Alipay Mini Program adapter entry for Peekit.",
   "type": "module",
   "main": "./dist/index.js",

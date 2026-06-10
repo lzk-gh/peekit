@@ -8,6 +8,8 @@ This package distributes the Peekit MCP server:
 npx -y peekit mcp
 ```
 
+The `0.1.0-alpha.0` release supports H5 and Weixin Mini Program runtime targets. Other mini program targets are roadmap items and return explicit unsupported evidence.
+
 Add it to an MCP client:
 
 ```json

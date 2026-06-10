@@ -1,8 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { createH5Adapter } from "@peekit/adapter-h5";
-import { createAlipayMiniProgramAdapter } from "@peekit/adapter-mp-alipay";
-import { createByteDanceMiniProgramAdapter } from "@peekit/adapter-mp-bytedance";
-import { createQQMiniProgramAdapter } from "@peekit/adapter-mp-qq";
 import { createWeixinMiniProgramAdapter } from "@peekit/adapter-mp-weixin";
 import {
   CaptureSnapshotOptionsSchema,
@@ -11,6 +8,7 @@ import {
   RuntimeEvidenceSchema,
   RuntimeSnapshotSchema,
   compareCrossTargetSnapshots,
+  createUnsupportedAdapter,
   diagnoseIssue,
   diffSnapshots,
   explainSetupBlocker,
@@ -448,9 +446,9 @@ function defaultAdapters(): PeekitAdapter[] {
   return [
     createH5Adapter(),
     createWeixinMiniProgramAdapter(),
-    createAlipayMiniProgramAdapter(),
-    createByteDanceMiniProgramAdapter(),
-    createQQMiniProgramAdapter()
+    createUnsupportedAdapter("mp-alipay", "Alipay Mini Program Adapter"),
+    createUnsupportedAdapter("mp-bytedance", "ByteDance Mini Program Adapter"),
+    createUnsupportedAdapter("mp-qq", "QQ Mini Program Adapter")
   ];
 }
 
