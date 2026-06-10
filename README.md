@@ -2,7 +2,7 @@
 
 Runtime eyes for AI agents.
 
-Peekit is an AI-first runtime inspection MCP server. It gives coding agents measured evidence from H5 and planned mini program targets: page state, element text, DOM markup, rects, computed styles, console output, errors, interactions, before/after snapshots, and diagnosis hints.
+Peekit is an AI-first runtime inspection MCP server. It gives coding agents measured evidence from H5 and Weixin Mini Program targets: page state, element text, DOM markup or WXML, rects, computed styles, console output, errors, interactions, before/after snapshots, and diagnosis hints.
 
 Peekit is not designed as a human-operated CLI workflow. The npm package is the distribution vehicle for the MCP server.
 
@@ -67,9 +67,9 @@ Peekit exposes these MCP tools:
 | --- | --- | --- |
 | H5 | Implemented | Playwright-backed page, DOM, text, rect, computed style, console, errors, click, tap, input, scroll, hover |
 | Weixin mini program | Implemented | Uses `miniprogram-automator` to connect Weixin Developer Tools and capture route, WXML, text, size, offset, style, console, errors, tap, input, and scroll |
-| Alipay mini program | Planned | Public package exists and returns explicit unsupported evidence |
-| ByteDance mini program | Planned | Public package exists and returns explicit unsupported evidence |
-| QQ mini program | Planned | Public package exists and returns explicit unsupported evidence |
+| Alipay mini program | Roadmap | Not part of the alpha support scope; returns explicit unsupported evidence |
+| ByteDance mini program | Roadmap | Not part of the alpha support scope; returns explicit unsupported evidence |
+| QQ mini program | Roadmap | Not part of the alpha support scope; returns explicit unsupported evidence |
 
 Unsupported fields are reported explicitly so agents can reason from capability evidence instead of guessing.
 
@@ -99,3 +99,4 @@ examples/
 
 See `docs/ai-usage.md` and `docs/agent-contract.md` for the agent workflow and runtime evidence contract.
 For real Weixin Developer Tools setup, see `docs/weixin-troubleshooting.md`.
+For alpha publishing, see `docs/release.md`.

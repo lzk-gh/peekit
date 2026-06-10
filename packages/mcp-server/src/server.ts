@@ -13,7 +13,7 @@ export function createPeekitMcpServer(runtime = new PeekitMcpRuntime()): Server 
   const server = new Server(
     {
       name: "peekit",
-      version: "0.1.0"
+      version: "0.1.0-alpha.0"
     },
     {
       capabilities: {

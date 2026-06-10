@@ -1,11 +1,20 @@
 {
   "name": "@peekit/core",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.0",
   "description": "Core contracts, schemas, capability matrix, diffing, and diagnostics for Peekit.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lzk-gh/peekit.git",
+    "directory": "packages/core"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": ["dist", "!dist/.tsbuildinfo"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
